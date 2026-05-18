@@ -23,16 +23,18 @@ export default function MarketsPage() {
   const stocks  = DEFAULT_WATCHLIST.filter((w) => w.type === "stock");
   const cryptos = DEFAULT_WATCHLIST.filter((w) => w.type === "crypto");
   const hk      = DEFAULT_WATCHLIST.filter((w) => w.type === "hk");
+  const cn      = DEFAULT_WATCHLIST.filter((w) => w.type === "cn");
 
   return (
-    <div className="p-6 flex flex-col gap-8">
+    <div className="p-4 md:p-6 flex flex-col gap-6 md:gap-8">
       <div>
         <h1 className="text-xl font-bold">{t.markets.title}</h1>
         <p className="text-sm text-[var(--muted)] mt-0.5">{t.markets.subtitle}</p>
       </div>
 
-      <AssetSection title={t.markets.usEquities} items={stocks}  quotes={quotes} onSelect={goToTrade} lang={lang} />
-      <AssetSection title={t.markets.chinaHK}    items={hk}     quotes={quotes} onSelect={goToTrade} lang={lang} />
+      <AssetSection title={t.markets.usEquities}  items={stocks}  quotes={quotes} onSelect={goToTrade} lang={lang} />
+      <AssetSection title={t.markets.mainlandCN}  items={cn}      quotes={quotes} onSelect={goToTrade} lang={lang} />
+      <AssetSection title={t.markets.chinaHK}     items={hk}      quotes={quotes} onSelect={goToTrade} lang={lang} />
       <AssetSection title={t.markets.crypto}      items={cryptos} quotes={quotes} onSelect={goToTrade} lang={lang} />
     </div>
   );
@@ -76,12 +78,14 @@ function AssetSection({
               const sym  = currencySymbol(meta?.currency ?? "USD");
               const ticker = item.symbol.replace("USDT","").replace(/^HK/,"");
               const name   = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? item.name);
-              const badgeVariant = item.type === "crypto" ? "purple" : item.type === "hk" ? "yellow" : "default";
-              const badgeLabel   = item.type === "crypto" ? t.badge.crypto : item.type === "hk" ? t.badge.hk : t.badge.stock;
+              const badgeVariant = item.type === "crypto" ? "purple" : item.type === "hk" ? "yellow" : item.type === "cn" ? "cn" : "default";
+              const badgeLabel   = item.type === "crypto" ? t.badge.crypto : item.type === "hk" ? t.badge.hk : item.type === "cn" ? t.badge.cn : t.badge.stock;
               const iconBg = item.type === "crypto"
                 ? "bg-[rgba(188,140,255,0.15)] text-[var(--purple)]"
                 : item.type === "hk"
                 ? "bg-[rgba(255,160,0,0.15)] text-[var(--yellow)]"
+                : item.type === "cn"
+                ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"
                 : "bg-[rgba(88,166,255,0.15)] text-[var(--accent)]";
 
               return (

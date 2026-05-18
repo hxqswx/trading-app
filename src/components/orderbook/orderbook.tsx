@@ -37,7 +37,7 @@ export function OrderBook({ symbol }: OrderBookProps) {
     <Card className="p-0 overflow-hidden flex flex-col h-full">
       <CardHeader className="px-4 pt-4 pb-3 mb-0">
         <CardTitle>{t.orderbook.title}</CardTitle>
-        <span className="text-xs text-[var(--muted)]">{symbol.replace("USDT","").replace(/^HK/,"")}</span>
+        <span className="text-xs text-[var(--muted)]">{symbol.replace("USDT","").replace(/^(HK|CN)/,"")}</span>
       </CardHeader>
 
       <div className="grid grid-cols-3 px-4 pb-2 text-[10px] text-[var(--muted)] uppercase tracking-wide shrink-0">

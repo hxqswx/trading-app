@@ -28,9 +28,10 @@ export function Watchlist() {
     ASSET_META[w.symbol]?.nameCN?.includes(query)
   );
 
-  const cryptos  = filtered.filter((w) => w.type === "crypto");
-  const stocks   = filtered.filter((w) => w.type === "stock");
-  const hkStocks = filtered.filter((w) => w.type === "hk");
+  const cryptos   = filtered.filter((w) => w.type === "crypto");
+  const stocks    = filtered.filter((w) => w.type === "stock");
+  const hkStocks  = filtered.filter((w) => w.type === "hk");
+  const cnStocks  = filtered.filter((w) => w.type === "cn");
 
   return (
     <div className="flex flex-col h-full bg-[var(--surface)]">
@@ -55,6 +56,13 @@ export function Watchlist() {
         {stocks.length > 0 && <>
           <SectionLabel label={t.watchlist.equities} />
           {stocks.map((item) => (
+            <AssetRow key={item.symbol} symbol={item.symbol} quote={quotes[item.symbol]} history={priceHistory[item.symbol] ?? []} active={activeSymbol === item.symbol} onSelect={handleSelect} />
+          ))}
+        </>}
+
+        {cnStocks.length > 0 && <>
+          <SectionLabel label={t.watchlist.mainlandCN} />
+          {cnStocks.map((item) => (
             <AssetRow key={item.symbol} symbol={item.symbol} quote={quotes[item.symbol]} history={priceHistory[item.symbol] ?? []} active={activeSymbol === item.symbol} onSelect={handleSelect} />
           ))}
         </>}
@@ -90,12 +98,14 @@ function AssetRow({ symbol, quote, history, active, onSelect }: {
   const sym   = meta ? currencySymbol(meta.currency) : "$";
   const dec   = price !== undefined && price < 10 ? 4 : 2;
   const displayName = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? symbol);
-  const ticker = symbol.replace("USDT","").replace(/^HK/,"");
+  const ticker = symbol.replace("USDT","").replace(/^(HK|CN)/,"");
 
   const iconColor = meta?.type === "crypto"
     ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]"
     : meta?.type === "hk"
     ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"
+    : meta?.type === "cn"
+    ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"
     : "bg-[rgba(88,166,255,0.12)] text-[var(--accent)]";
 
   return (
@@ -111,7 +121,9 @@ function AssetRow({ symbol, quote, history, active, onSelect }: {
         <div className="flex items-baseline justify-between gap-1">
           <span className="text-sm font-semibold truncate">{ticker}</span>
           {price !== undefined
-            ? <span className="text-xs font-mono font-semibold shrink-0">{sym}{price < 10 ? price.toFixed(dec) : price.toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec})}</span>
+            ? <span className="text-xs font-mono font-semibold shrink-0">
+                {sym}{price < 10 ? price.toFixed(dec) : price.toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec})}
+              </span>
             : <span className="text-xs text-[var(--muted)] animate-pulse">…</span>}
         </div>
         <div className="flex items-center justify-between mt-0.5">

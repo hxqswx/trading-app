@@ -8,7 +8,7 @@ export const ASSET_META: Record<string, {
   basePrice: number; volatility: number; avgVolume: number;
   description: string; descriptionCN: string;
   sector?: string; sectorCN?: string;
-  market: "US" | "HK" | "CRYPTO";
+  market: "US" | "HK" | "CN" | "CRYPTO";
 }> = {
   // ── Crypto ─────────────────────────────────────────────────────────────────
   BTCUSDT: { name: "Bitcoin",   nameCN: "比特币",   type: "crypto", currency: "USD", basePrice: 68_400,  volatility: 0.018, avgVolume: 25_000,      description: "Digital gold & store of value",        descriptionCN: "数字黄金与价值储存",               market: "CRYPTO" },
@@ -34,6 +34,13 @@ export const ASSET_META: Record<string, {
   HK9988: { name: "Alibaba HK",  nameCN: "阿里巴巴", type: "hk", currency: "HKD", basePrice: 75.40,  volatility: 0.025, avgVolume: 22_000_000, description: "Alibaba Group Hong Kong listing",          descriptionCN: "阿里巴巴集团港股",         sector: "E-commerce",  sectorCN: "电商", market: "HK" },
   HK3690: { name: "Meituan",     nameCN: "美团",     type: "hk", currency: "HKD", basePrice: 148.20, volatility: 0.028, avgVolume: 16_000_000, description: "China's leading food delivery & local services",descriptionCN: "中国领先外卖与本地生活服务", sector: "Services",  sectorCN: "服务", market: "HK" },
   HK1810: { name: "Xiaomi",      nameCN: "小米集团", type: "hk", currency: "HKD", basePrice: 18.60,  volatility: 0.032, avgVolume: 52_000_000, description: "Smartphones, IoT & EV ecosystem",         descriptionCN: "手机、IoT与新能源车生态",  sector: "Technology",  sectorCN: "科技", market: "HK" },
+
+  // ── Mainland China A-shares (CNY) ──────────────────────────────────────────
+  CNMTAI:  { name: "Kweichow Moutai", nameCN: "贵州茅台", type: "cn", currency: "CNY", basePrice: 1_748,  volatility: 0.012, avgVolume: 3_800_000,  description: "China's iconic luxury baijiu brand and most valuable A-share",     descriptionCN: "中国最具代表性的高端白酒品牌，A股市值之王",         sector: "Consumer Staples", sectorCN: "消费品", market: "CN" },
+  CNCATL:  { name: "CATL",            nameCN: "宁德时代", type: "cn", currency: "CNY", basePrice: 244.5,  volatility: 0.022, avgVolume: 28_000_000, description: "World's largest EV battery manufacturer by market share",          descriptionCN: "全球市占率第一的动力电池龙头企业",                 sector: "New Energy",       sectorCN: "新能源", market: "CN" },
+  CNBYD:   { name: "BYD",             nameCN: "比亚迪",   type: "cn", currency: "CNY", basePrice: 285.2,  volatility: 0.025, avgVolume: 22_000_000, description: "Leading Chinese EV and battery maker; Warren Buffett holding",    descriptionCN: "中国新能源汽车龙头，巴菲特长期持仓标的",            sector: "Automotive",       sectorCN: "汽车",   market: "CN" },
+  CNPING:  { name: "Ping An",         nameCN: "中国平安", type: "cn", currency: "CNY", basePrice: 44.6,   volatility: 0.015, avgVolume: 65_000_000, description: "China's largest insurance & financial services conglomerate",     descriptionCN: "中国最大综合金融保险集团",                         sector: "Financials",       sectorCN: "金融",   market: "CN" },
+  CNICBC:  { name: "ICBC",            nameCN: "工商银行", type: "cn", currency: "CNY", basePrice: 6.48,   volatility: 0.008, avgVolume: 280_000_000,description: "Industrial & Commercial Bank of China, world's largest bank by assets", descriptionCN: "中国工商银行，资产规模全球最大的商业银行",    sector: "Banking",          sectorCN: "银行",   market: "CN" },
 };
 
 // ── Currency formatting ──────────────────────────────────────────────────────
@@ -177,6 +184,8 @@ export const MOCK_PORTFOLIO: PortfolioSummary = {
     { symbol: "ETHUSDT", qty: 3,    avgEntryPrice: 2_200,  currentPrice: 3_520,  marketValue: 10_560.00, unrealizedPnl: 3_960.00, unrealizedPnlPct: 60.00,  type: "crypto",currency: "USD" },
     { symbol: "HK0700",  qty: 200,  avgEntryPrice: 310.00, currentPrice: 372.00, marketValue: 74_400.00, unrealizedPnl: 12_400.00,unrealizedPnlPct: 20.00,  type: "hk",    currency: "HKD" },
     { symbol: "HK9988",  qty: 500,  avgEntryPrice: 68.00,  currentPrice: 75.40,  marketValue: 37_700.00, unrealizedPnl: 3_700.00, unrealizedPnlPct: 10.88,  type: "hk",    currency: "HKD" },
+    { symbol: "CNMTAI",  qty: 10,   avgEntryPrice: 1_580,  currentPrice: 1_748,  marketValue: 17_480.00, unrealizedPnl: 1_680.00, unrealizedPnlPct: 10.63,  type: "cn",    currency: "CNY" },
+    { symbol: "CNBYD",   qty: 100,  avgEntryPrice: 258.00, currentPrice: 285.20, marketValue: 28_520.00, unrealizedPnl: 2_720.00, unrealizedPnlPct: 10.54,  type: "cn",    currency: "CNY" },
   ],
 };
 
@@ -251,5 +260,26 @@ export const MOCK_AI_ANALYSES: Record<string, Record<"en" | "zh", Omit<AIAnalysi
   HK1810: {
     en: { sentiment: "bullish", summary: "Xiaomi's smartphone recovery is outperforming peers. The EV launch (SU7) has exceeded expectations with strong demand. IoT ecosystem creates a durable competitive moat.", keyLevels: { support: 16.00, resistance: 22.00 }, signals: ["SU7 deliveries exceeding 20K/month", "Global smartphone shipments growing 8% YoY", "AIoT devices approaching 1 billion connected"], riskLevel: "medium" },
     zh: { sentiment: "bullish", summary: "小米智能手机复苏明显优于同行。电动车SU7发布超预期，市场需求强劲。IoT生态系统构建了持久的竞争护城河，全球接入设备即将突破10亿台。", keyLevels: { support: 16.00, resistance: 22.00 }, signals: ["SU7月交付量突破2万辆", "全球手机出货量同比增长8%", "AIoT接入设备接近10亿台"], riskLevel: "medium" },
+  },
+  // ── A-shares ────────────────────────────────────────────────────────────────
+  CNMTAI: {
+    en: { sentiment: "bullish", summary: "Kweichow Moutai remains China's most prestigious spirits brand with exceptional pricing power. The company's direct sales channel expansion is driving margin improvement. Long-term demand from gift-giving and banquet culture remains structural.", keyLevels: { support: 1_680, resistance: 1_840 }, signals: ["Direct sales channel share reaching 40%+", "Wholesale price premium maintained above ¥2,800", "Free cash flow yield ~3% at current price"], riskLevel: "low" },
+    zh: { sentiment: "bullish", summary: "贵州茅台凭借极强的品牌定价权长期屹立A股之巅。直销渠道占比持续提升推动利润率改善，礼赠及宴席文化提供结构性需求支撑，现金流充沛，是价值投资者的核心配置标的。", keyLevels: { support: 1_680, resistance: 1_840 }, signals: ["直销渠道占比突破40%", "批发价格维持2800元以上溢价", "当前股价自由现金流收益率约3%"], riskLevel: "low" },
+  },
+  CNCATL: {
+    en: { sentiment: "bullish", summary: "CATL is expanding globally with European and North American gigafactories while maintaining 37%+ global EV battery market share. Sodium-ion and solid-state battery commercialisation timelines are key catalysts.", keyLevels: { support: 220, resistance: 272 }, signals: ["Global market share stable at 37%+", "European gigafactory nearing production ramp", "Sodium-ion battery mass production from 2025"], riskLevel: "medium" },
+    zh: { sentiment: "bullish", summary: "宁德时代全球市占率稳居37%以上，欧洲及北美超级工厂持续推进产能落地。钠离子和固态电池量产时间表是核心催化剂，全球化布局构建了竞争护城河。", keyLevels: { support: 220, resistance: 272 }, signals: ["全球市占率稳定在37%以上", "欧洲超级工厂即将进入产能爬坡期", "钠离子电池2025年实现大规模量产"], riskLevel: "medium" },
+  },
+  CNBYD: {
+    en: { sentiment: "bullish", summary: "BYD is the world's top-selling EV brand, outpacing Tesla in volume. Its vertically integrated supply chain gives unmatched cost advantages. Overseas expansion into Europe and Southeast Asia broadens the growth runway.", keyLevels: { support: 258, resistance: 318 }, signals: ["Monthly sales exceeding 400K vehicles", "Seagull EV driving emerging market penetration", "Overseas revenue growing 60%+ YoY"], riskLevel: "medium" },
+    zh: { sentiment: "bullish", summary: "比亚迪已成为全球销量最高的新能源汽车品牌，垂直整合供应链带来无与伦比的成本优势。出海战略加速推进，欧洲及东南亚市场为成长打开更广阔空间。", keyLevels: { support: 258, resistance: 318 }, signals: ["月销量突破40万辆", "海鸥车型驱动新兴市场渗透率快速提升", "海外营收同比增长60%+"], riskLevel: "medium" },
+  },
+  CNPING: {
+    en: { sentiment: "neutral", summary: "Ping An Insurance is a financial conglomerate with leading positions in life insurance, property insurance, and banking. Near-term challenges include credit quality concerns in its banking arm and soft premium growth amid macro weakness.", keyLevels: { support: 40.5, resistance: 49.8 }, signals: ["Life insurance NBV growth recovering to 6%+", "Ping An Bank NPL ratio stabilising", "Dividend yield ~5.5% offering downside support"], riskLevel: "medium" },
+    zh: { sentiment: "neutral", summary: "中国平安是寿险、财险和银行领域均居于领先的综合金融集团。短期挑战在于银行板块资产质量承压以及宏观下行背景下保费增长放缓，高股息收益率提供安全边际。", keyLevels: { support: 40.5, resistance: 49.8 }, signals: ["寿险新业务价值增速回升至6%+", "平安银行不良率趋于稳定", "股息收益率约5.5%，提供下行保护"], riskLevel: "medium" },
+  },
+  CNICBC: {
+    en: { sentiment: "neutral", summary: "ICBC is the world's largest bank by total assets with a stable business model anchored in retail and corporate deposits. Net interest margin compression is the key risk. The stock's 6%+ dividend yield makes it a popular income holding.", keyLevels: { support: 6.0, resistance: 7.2 }, signals: ["NIM stabilising as rate cuts slow", "Dividend payout ratio maintained at ~30%", "State-backed asset quality support limiting downside"], riskLevel: "low" },
+    zh: { sentiment: "neutral", summary: "工商银行是全球资产规模最大的商业银行，以零售和对公存款为核心的商业模式稳健。净息差收窄是主要风险，6%以上的股息收益率使其成为受欢迎的高息配置品种。", keyLevels: { support: 6.0, resistance: 7.2 }, signals: ["随利率下调节奏放缓，净息差趋于稳定", "股息分配比例维持约30%", "国家背书支撑资产质量，下行空间有限"], riskLevel: "low" },
   },
 };

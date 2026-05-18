@@ -55,10 +55,10 @@ export function PositionsTable() {
               portfolio.positions.map((p) => {
                 const meta      = ASSET_META[p.symbol];
                 const sym       = currencySymbol(p.currency ?? "USD");
-                const ticker    = p.symbol.replace("USDT","").replace(/^HK/,"");
+                const ticker    = p.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
                 const name      = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? p.symbol);
-                const badgeV    = p.type === "crypto" ? "purple" : p.type === "hk" ? "yellow" : "default";
-                const badgeL    = p.type === "crypto" ? t.badge.crypto : p.type === "hk" ? t.badge.hk : t.badge.stock;
+                const badgeV    = p.type === "crypto" ? "purple" : p.type === "hk" ? "yellow" : p.type === "cn" ? "cn" : "default";
+                const badgeL    = p.type === "crypto" ? t.badge.crypto : p.type === "hk" ? t.badge.hk : p.type === "cn" ? t.badge.cn : t.badge.stock;
 
                 return (
                   <tr
@@ -71,6 +71,7 @@ export function PositionsTable() {
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                           p.type === "crypto" ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]"
                           : p.type === "hk"   ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"
+                          : p.type === "cn"   ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"
                           : "bg-[rgba(88,166,255,0.12)] text-[var(--accent)]"
                         }`}>
                           {ticker.slice(0,2)}

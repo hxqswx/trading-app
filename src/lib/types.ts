@@ -1,4 +1,4 @@
-export type AssetType = "stock" | "crypto" | "hk";
+export type AssetType = "stock" | "crypto" | "hk" | "cn";
 
 export interface Quote {
   symbol: string;
@@ -47,7 +47,7 @@ export interface Position {
   unrealizedPnl: number;
   unrealizedPnlPct: number;
   type: AssetType;
-  currency?: string;
+  currency?: string; // "USD" | "HKD" | "CNY"
 }
 
 export interface PortfolioSummary {

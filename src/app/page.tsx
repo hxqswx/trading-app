@@ -14,10 +14,10 @@ import { TrendingUp, TrendingDown, DollarSign, Wallet, BarChart2, ArrowRight } f
 export default function DashboardPage() {
   return (
     <div className="flex h-full min-h-0">
-      <div className="flex-1 flex flex-col gap-5 p-5 overflow-y-auto min-w-0">
+      <div className="flex-1 flex flex-col gap-4 md:gap-5 p-4 md:p-5 overflow-y-auto min-w-0">
         <Greeting />
         <SummaryCards />
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-5">
           <div className="xl:col-span-2"><PositionsTable /></div>
           <div><TopMovers /></div>
         </div>
@@ -118,10 +118,10 @@ function PositionsTable() {
               const livePct   = ((livePrice - p.avgEntryPrice) / p.avgEntryPrice) * 100;
               const meta      = ASSET_META[p.symbol];
               const sym       = currencySymbol(p.currency ?? "USD");
-              const ticker    = p.symbol.replace("USDT","").replace(/^HK/,"");
+              const ticker    = p.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
               const name      = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? p.symbol);
-              const badgeV    = p.type === "crypto" ? "purple" : p.type === "hk" ? "yellow" : "default";
-              const badgeL    = p.type === "crypto" ? t.badge.crypto : p.type === "hk" ? t.badge.hk : t.badge.stock;
+              const badgeV    = p.type === "crypto" ? "purple" : p.type === "hk" ? "yellow" : p.type === "cn" ? "cn" : "default";
+              const badgeL    = p.type === "crypto" ? t.badge.crypto : p.type === "hk" ? t.badge.hk : p.type === "cn" ? t.badge.cn : t.badge.stock;
               return (
                 <tr key={p.symbol} onClick={() => goTo(p.symbol)}
                   className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] cursor-pointer transition-colors group"
@@ -131,6 +131,7 @@ function PositionsTable() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                         p.type === "crypto" ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]"
                         : p.type === "hk"   ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"
+                        : p.type === "cn"   ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"
                         : "bg-[rgba(88,166,255,0.12)] text-[var(--accent)]"
                       }`}>
                         {ticker.slice(0,2)}
@@ -189,7 +190,7 @@ function TopMovers() {
           : sorted.map((q) => {
               const meta   = ASSET_META[q.symbol];
               const up     = q.changePct >= 0;
-              const ticker = q.symbol.replace("USDT","").replace(/^HK/,"");
+              const ticker = q.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
               const sym    = currencySymbol(q.currency);
               const name   = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? q.symbol);
               return (
@@ -199,6 +200,7 @@ function TopMovers() {
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                     q.type === "crypto" ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]"
                     : q.type === "hk"   ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"
+                    : q.type === "cn"   ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"
                     : "bg-[rgba(88,166,255,0.12)] text-[var(--accent)]"
                   }`}>
                     {ticker.slice(0,2)}

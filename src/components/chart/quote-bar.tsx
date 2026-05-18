@@ -22,7 +22,7 @@ export function QuoteBar({ symbol }: QuoteBarProps) {
   );
 
   const up     = quote.changePct >= 0;
-  const ticker = symbol.replace("USDT","").replace(/^HK/,"");
+  const ticker = symbol.replace("USDT","").replace(/^(HK|CN)/,"");
   const name   = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? symbol);
   const dec    = quote.price < 10 ? 4 : 2;
   const fmt    = (n: number) => `${sym}${n.toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec})}`;

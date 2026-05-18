@@ -24,6 +24,12 @@ export const DEFAULT_WATCHLIST: WatchlistItem[] = [
   { symbol: "HK9988",  name: "Alibaba HK",     type: "hk"     },
   { symbol: "HK3690",  name: "Meituan",        type: "hk"     },
   { symbol: "HK1810",  name: "Xiaomi",         type: "hk"     },
+  // Mainland China A-shares
+  { symbol: "CNMTAI",  name: "Kweichow Moutai",type: "cn"     },
+  { symbol: "CNCATL",  name: "CATL",           type: "cn"     },
+  { symbol: "CNBYD",   name: "BYD",            type: "cn"     },
+  { symbol: "CNPING",  name: "Ping An",        type: "cn"     },
+  { symbol: "CNICBC",  name: "ICBC",           type: "cn"     },
 ];
 
 const HISTORY_LIMIT = 60;

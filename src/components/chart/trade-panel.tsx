@@ -32,7 +32,7 @@ export function TradePanel({ symbol }: TradePanelProps) {
   const execPrice = (orderType === "limit" && limitPrice) ? parseFloat(limitPrice) : price;
   const estTotal  = qty && execPrice ? parseFloat(qty) * execPrice : null;
   const maxAfford = price > 0 ? 24_200 / price : 0;
-  const ticker    = symbol.replace("USDT","").replace(/^HK/,"");
+  const ticker    = symbol.replace("USDT","").replace(/^(HK|CN)/,"");
 
   const ORDER_TYPES = [
     { value: "market"    , label: t.trade.market,    desc: t.trade.marketDesc    },

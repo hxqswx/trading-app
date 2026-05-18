@@ -70,3 +70,16 @@ body {
 }
 .flash-green { animation: pulse-green 0.6s ease; }
 .flash-red   { animation: pulse-red 0.6s ease; }
+
+/* Safe area for notched phones */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Responsive: ensure tables don't overflow on small screens */
+@media (max-width: 640px) {
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+}
+
+/* Touch-friendly hit areas */
+@media (max-width: 768px) {
+  button, a { min-height: 44px; }
+}

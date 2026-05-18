@@ -13,13 +13,14 @@ export function Sidebar() {
   const t = useT();
 
   const nav = [
-    { href: "/",         icon: LayoutDashboard, label: t.nav.dashboard },
-    { href: "/markets",  icon: BarChart2,        label: t.nav.markets   },
-    { href: "/portfolio",icon: Wallet,           label: t.nav.portfolio  },
+    { href: "/",          icon: LayoutDashboard, label: t.nav.dashboard },
+    { href: "/markets",   icon: BarChart2,        label: t.nav.markets   },
+    { href: "/portfolio", icon: Wallet,           label: t.nav.portfolio  },
   ];
 
   return (
-    <aside className="flex flex-col w-16 border-r border-[var(--border)] bg-[var(--surface)] h-screen sticky top-0 z-20">
+    /* Hidden on mobile — the MobileNav handles that breakpoint */
+    <aside className="hidden md:flex flex-col w-16 border-r border-[var(--border)] bg-[var(--surface)] h-screen sticky top-0 z-20 shrink-0">
       {/* Logo */}
       <div className="flex items-center justify-center h-14 border-b border-[var(--border)] shrink-0">
         <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center">
@@ -48,7 +49,6 @@ export function Sidebar() {
 
       {/* Bottom: lang toggle + icons */}
       <div className="flex flex-col items-center gap-2 py-4 border-t border-[var(--border)]">
-        {/* Language toggle */}
         <button
           onClick={() => setLang(lang === "en" ? "zh" : "en")}
           title={lang === "en" ? "切换中文" : "Switch to English"}

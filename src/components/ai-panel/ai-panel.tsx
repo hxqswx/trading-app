@@ -84,7 +84,7 @@ export function AIPanel({ symbol }: AIPanelProps) {
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-8">
           <Sparkles size={28} className="text-[var(--purple)] opacity-40" />
           <p className="text-sm text-[var(--muted)] leading-relaxed">
-            {t.ai.clickHint} <strong className="text-[var(--foreground)]">{t.ai.clickHintBtn}</strong> {lang === "zh" ? `获取 ${symbol.replace("USDT","").replace(/^HK/,"")} 的AI洞察` : `for AI insights on ${symbol.replace("USDT","").replace(/^HK/,"")}`}
+            {t.ai.clickHint} <strong className="text-[var(--foreground)]">{t.ai.clickHintBtn}</strong> {lang === "zh" ? `获取 ${symbol.replace("USDT","").replace(/^(HK|CN)/,"")} 的AI洞察` : `for AI insights on ${symbol.replace("USDT","").replace(/^(HK|CN)/,"")}`}
           </p>
         </div>
       )}

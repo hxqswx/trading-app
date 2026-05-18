@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: "default" | "green" | "red" | "yellow" | "purple" | "outline";
+  variant?: "default" | "green" | "red" | "yellow" | "purple" | "outline" | "cn";
 }
 
 export function Badge({ variant = "default", className, ...props }: BadgeProps) {
@@ -15,6 +15,7 @@ export function Badge({ variant = "default", className, ...props }: BadgeProps) 
         variant === "yellow"  && "bg-[rgba(210,153,34,0.15)] text-[var(--yellow)]",
         variant === "purple"  && "bg-[rgba(188,140,255,0.15)] text-[var(--purple)]",
         variant === "outline" && "border border-[var(--border)] text-[var(--muted)]",
+        variant === "cn"      && "bg-[rgba(248,81,73,0.12)] text-[#ff6b6b]",
         className
       )}
       {...props}

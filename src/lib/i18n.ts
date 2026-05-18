@@ -8,7 +8,7 @@ export interface Translations {
   topbar: { live: string };
   watchlist: {
     title: string; search: string;
-    crypto: string; equities: string; cnHk: string;
+    crypto: string; equities: string; cnHk: string; mainlandCN: string;
   };
   trade: {
     placeOrder: string; simple: string; pro: string;
@@ -38,7 +38,7 @@ export interface Translations {
     bullish: string; bearish: string; neutral: string;
     low: string; medium: string; high: string; risk: string;
   };
-  chart: { loading: string; range24h: string; vol: string };
+  chart: { loading: string; range24h: string; vol: string; title: string };
   dashboard: {
     title: string; subtitle: string;
     greeting: string; greetingSub: string; today: string;
@@ -53,7 +53,7 @@ export interface Translations {
   };
   markets: {
     title: string; subtitle: string;
-    usEquities: string; chinaHK: string; crypto: string; cnHk: string;
+    usEquities: string; chinaHK: string; mainlandCN: string; crypto: string; cnHk: string;
     change24h: string; volume: string;
   };
   table: {
@@ -70,7 +70,7 @@ export interface Translations {
 const en: Translations = {
   nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", notifications: "Notifications", settings: "Settings" },
   topbar: { live: "Live" },
-  watchlist: { title: "Watchlist", search: "Search…", crypto: "Crypto", equities: "US Equities", cnHk: "China / HK" },
+  watchlist: { title: "Watchlist", search: "Search…", crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares" },
   trade: {
     placeOrder: "Place Order", simple: "Simple", pro: "Pro",
     buy: "Buy", sell: "Sell", buying: "Buy", selling: "Sell",
@@ -95,7 +95,7 @@ const en: Translations = {
     bullish: "BULLISH", bearish: "BEARISH", neutral: "NEUTRAL",
     low: "LOW", medium: "MEDIUM", high: "HIGH", risk: "RISK",
   },
-  chart: { loading: "Loading chart…", range24h: "24h range", vol: "Vol" },
+  chart: { loading: "Loading chart…", range24h: "24h range", vol: "Vol", title: "Chart" },
   dashboard: {
     title: "Dashboard", subtitle: "Portfolio overview & market summary",
     greeting: "Good morning 👋", greetingSub: "Your portfolio is looking great today.",
@@ -110,11 +110,11 @@ const en: Translations = {
   },
   markets: {
     title: "Markets", subtitle: "Live prices across all assets",
-    usEquities: "US Equities", chinaHK: "China / HK", crypto: "Crypto", cnHk: "China / HK",
+    usEquities: "US Equities", chinaHK: "HK Stocks", mainlandCN: "A-Shares", crypto: "Crypto", cnHk: "HK Stocks",
     change24h: "24h Change", volume: "Volume",
   },
   table: { asset: "Asset", qty: "Qty", avgCost: "Avg Cost", current: "Current", value: "Market Value", pnl: "P&L", high: "High", low: "Low" },
-  badge: { stock: "stock", crypto: "crypto", hk: "HK", cn: "CN" },
+  badge: { stock: "US", crypto: "Crypto", hk: "HK", cn: "A股" },
   notFound: { title: "Page not found", sub: "The page you're looking for doesn't exist.", back: "Back to Dashboard" },
   loading: "Loading…",
   error: "Something went wrong",
@@ -123,7 +123,7 @@ const en: Translations = {
 const zh: Translations = {
   nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", notifications: "通知", settings: "设置" },
   topbar: { live: "实时" },
-  watchlist: { title: "自选股", search: "搜索…", crypto: "加密货币", equities: "美股", cnHk: "中港股票" },
+  watchlist: { title: "自选股", search: "搜索…", crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股" },
   trade: {
     placeOrder: "下单", simple: "简单", pro: "专业",
     buy: "买入", sell: "卖出", buying: "买入", selling: "卖出",
@@ -148,7 +148,7 @@ const zh: Translations = {
     bullish: "看涨", bearish: "看跌", neutral: "中性",
     low: "低", medium: "中", high: "高", risk: "风险",
   },
-  chart: { loading: "图表加载中…", range24h: "24小时区间", vol: "成交量" },
+  chart: { loading: "图表加载中…", range24h: "24小时区间", vol: "成交量", title: "图表" },
   dashboard: {
     title: "总览", subtitle: "投资组合概览与市场摘要",
     greeting: "早上好 👋", greetingSub: "您的投资组合今日表现不错。",
@@ -163,7 +163,7 @@ const zh: Translations = {
   },
   markets: {
     title: "市场", subtitle: "全品种实时行情",
-    usEquities: "美股", chinaHK: "中港股票", crypto: "加密货币", cnHk: "中港股票",
+    usEquities: "美股", chinaHK: "港股", mainlandCN: "A股", crypto: "加密货币", cnHk: "港股",
     change24h: "24小时涨跌", volume: "成交量",
   },
   table: { asset: "资产", qty: "数量", avgCost: "均价", current: "现价", value: "市值", pnl: "盈亏", high: "最高", low: "最低" },
