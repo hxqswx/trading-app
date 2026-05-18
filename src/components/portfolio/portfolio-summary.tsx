@@ -1,12 +1,14 @@
 "use client";
 
 import { usePortfolio } from "@/lib/hooks/use-portfolio";
+import { useT } from "@/lib/hooks/use-t";
 import { Card } from "@/components/ui/card";
 import { fmtCurrency, fmtPercent, colorClass } from "@/lib/utils";
 import { TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react";
 
 export function PortfolioSummaryCards() {
   const { portfolio, loading } = usePortfolio();
+  const t = useT();
 
   if (loading || !portfolio) {
     return (
@@ -20,28 +22,28 @@ export function PortfolioSummaryCards() {
 
   const stats = [
     {
-      label: "Total Equity",
+      label: t.portfolio.equity,
       value: fmtCurrency(portfolio.equity),
       sub:   null,
       icon:  <DollarSign size={16} />,
       color: "text-[var(--accent)]",
     },
     {
-      label: "Cash",
+      label: t.portfolio.cash,
       value: fmtCurrency(portfolio.cash),
       sub:   null,
       icon:  <Wallet size={16} />,
       color: "text-[var(--muted)]",
     },
     {
-      label: "Day P&L",
+      label: t.portfolio.dayPnl,
       value: fmtCurrency(portfolio.dayPnl),
       sub:   fmtPercent(portfolio.dayPnlPct),
       icon:  portfolio.dayPnl >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
       color: colorClass(portfolio.dayPnl),
     },
     {
-      label: "Total P&L",
+      label: t.portfolio.totalPnl,
       value: fmtCurrency(portfolio.totalPnl),
       sub:   null,
       icon:  portfolio.totalPnl >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />,

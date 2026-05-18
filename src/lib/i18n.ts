@@ -1,0 +1,176 @@
+export type Lang = "en" | "zh";
+
+export interface Translations {
+  nav: {
+    dashboard: string; markets: string; portfolio: string;
+    notifications: string; settings: string;
+  };
+  topbar: { live: string };
+  watchlist: {
+    title: string; search: string;
+    crypto: string; equities: string; cnHk: string;
+  };
+  trade: {
+    placeOrder: string; simple: string; pro: string;
+    buy: string; sell: string; buying: string; selling: string;
+    qty: string; amount: string; maxQty: string;
+    limitPrice: string; stopPrice: string;
+    estPrice: string; estTotal: string;
+    paperTrading: string; placing: string;
+    bought: string; sold: string; at: string;
+    orderType: string;
+    market: string; marketDesc: string;
+    limit: string; limitDesc: string;
+    stop: string; stopDesc: string;
+    stopLimit: string; stopLimitDesc: string;
+    youllOwn: string; youllSell: string;
+  };
+  orderbook: {
+    title: string; spread: string;
+    price: string; size: string; total: string;
+  };
+  ai: {
+    title: string; analyse: string; analysing: string;
+    crunching: string; clickHint: string; clickHintBtn: string;
+    sentiment: string; riskLevel: string;
+    support: string; resistance: string; signals: string;
+    updated: string; keyLevels: string;
+    bullish: string; bearish: string; neutral: string;
+    low: string; medium: string; high: string; risk: string;
+  };
+  chart: { loading: string; range24h: string; vol: string };
+  dashboard: {
+    title: string; subtitle: string;
+    greeting: string; greetingSub: string; today: string;
+    positions: string; topMovers: string;
+    noPositions: string;
+  };
+  portfolio: {
+    title: string; subtitle: string;
+    equity: string; cash: string; dayPnl: string; totalPnl: string;
+    positions: string; openPositions: string; noPositions: string;
+    allocation: string; total: string;
+  };
+  markets: {
+    title: string; subtitle: string;
+    usEquities: string; chinaHK: string; crypto: string; cnHk: string;
+    change24h: string; volume: string;
+  };
+  table: {
+    asset: string; qty: string; avgCost: string;
+    current: string; value: string; pnl: string;
+    high: string; low: string;
+  };
+  badge: { stock: string; crypto: string; hk: string; cn: string };
+  notFound: { title: string; sub: string; back: string };
+  loading: string;
+  error: string;
+}
+
+const en: Translations = {
+  nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", notifications: "Notifications", settings: "Settings" },
+  topbar: { live: "Live" },
+  watchlist: { title: "Watchlist", search: "Search…", crypto: "Crypto", equities: "US Equities", cnHk: "China / HK" },
+  trade: {
+    placeOrder: "Place Order", simple: "Simple", pro: "Pro",
+    buy: "Buy", sell: "Sell", buying: "Buy", selling: "Sell",
+    qty: "Quantity", amount: "Amount", maxQty: "Max",
+    limitPrice: "Limit Price", stopPrice: "Stop Price",
+    estPrice: "Est. Price", estTotal: "Total",
+    paperTrading: "Paper trading — no real money used",
+    placing: "Placing order…", bought: "Bought", sold: "Sold", at: "@",
+    orderType: "Order Type",
+    market: "Market", marketDesc: "Execute immediately at the current price",
+    limit: "Limit", limitDesc: "Execute only at your specified price or better",
+    stop: "Stop", stopDesc: "Trigger a market order when price hits your stop",
+    stopLimit: "Stop-Limit", stopLimitDesc: "Trigger a limit order when price hits your stop",
+    youllOwn: "You'll own", youllSell: "You'll sell",
+  },
+  orderbook: { title: "Order Book", spread: "Spread", price: "Price", size: "Size", total: "Total" },
+  ai: {
+    title: "AI Analysis", analyse: "Analyse", analysing: "Analysing…",
+    crunching: "Crunching market data…", clickHint: "Click", clickHintBtn: "Analyse",
+    sentiment: "Sentiment", riskLevel: "Risk", support: "Support", resistance: "Resistance",
+    signals: "Signals", updated: "Last updated", keyLevels: "Key Levels",
+    bullish: "BULLISH", bearish: "BEARISH", neutral: "NEUTRAL",
+    low: "LOW", medium: "MEDIUM", high: "HIGH", risk: "RISK",
+  },
+  chart: { loading: "Loading chart…", range24h: "24h range", vol: "Vol" },
+  dashboard: {
+    title: "Dashboard", subtitle: "Portfolio overview & market summary",
+    greeting: "Good morning 👋", greetingSub: "Your portfolio is looking great today.",
+    today: "today", positions: "Open Positions", topMovers: "Top Movers",
+    noPositions: "No open positions",
+  },
+  portfolio: {
+    title: "Portfolio", subtitle: "Positions, P&L, and allocation",
+    equity: "Total Equity", cash: "Cash Available", dayPnl: "Day P&L", totalPnl: "Total P&L",
+    positions: "positions", openPositions: "Open Positions", noPositions: "No open positions",
+    allocation: "Allocation", total: "Total",
+  },
+  markets: {
+    title: "Markets", subtitle: "Live prices across all assets",
+    usEquities: "US Equities", chinaHK: "China / HK", crypto: "Crypto", cnHk: "China / HK",
+    change24h: "24h Change", volume: "Volume",
+  },
+  table: { asset: "Asset", qty: "Qty", avgCost: "Avg Cost", current: "Current", value: "Market Value", pnl: "P&L", high: "High", low: "Low" },
+  badge: { stock: "stock", crypto: "crypto", hk: "HK", cn: "CN" },
+  notFound: { title: "Page not found", sub: "The page you're looking for doesn't exist.", back: "Back to Dashboard" },
+  loading: "Loading…",
+  error: "Something went wrong",
+};
+
+const zh: Translations = {
+  nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", notifications: "通知", settings: "设置" },
+  topbar: { live: "实时" },
+  watchlist: { title: "自选股", search: "搜索…", crypto: "加密货币", equities: "美股", cnHk: "中港股票" },
+  trade: {
+    placeOrder: "下单", simple: "简单", pro: "专业",
+    buy: "买入", sell: "卖出", buying: "买入", selling: "卖出",
+    qty: "数量", amount: "数量", maxQty: "最大",
+    limitPrice: "限价", stopPrice: "止损价",
+    estPrice: "预估价格", estTotal: "总计",
+    paperTrading: "模拟交易 — 不涉及真实资金",
+    placing: "正在下单…", bought: "已买入", sold: "已卖出", at: "@",
+    orderType: "订单类型",
+    market: "市价单", marketDesc: "以当前市价立即成交",
+    limit: "限价单", limitDesc: "仅在达到您指定价格或更优价格时成交",
+    stop: "止损单", stopDesc: "当价格触及止损价时触发市价单",
+    stopLimit: "止损限价单", stopLimitDesc: "当价格触及止损价时触发限价单",
+    youllOwn: "将持有", youllSell: "将卖出",
+  },
+  orderbook: { title: "盘口", spread: "价差", price: "价格", size: "数量", total: "累计" },
+  ai: {
+    title: "AI 分析", analyse: "开始分析", analysing: "分析中…",
+    crunching: "正在处理市场数据…", clickHint: "点击", clickHintBtn: "开始分析",
+    sentiment: "市场情绪", riskLevel: "风险等级", support: "支撑位", resistance: "阻力位",
+    signals: "交易信号", updated: "更新时间", keyLevels: "关键价位",
+    bullish: "看涨", bearish: "看跌", neutral: "中性",
+    low: "低", medium: "中", high: "高", risk: "风险",
+  },
+  chart: { loading: "图表加载中…", range24h: "24小时区间", vol: "成交量" },
+  dashboard: {
+    title: "总览", subtitle: "投资组合概览与市场摘要",
+    greeting: "早上好 👋", greetingSub: "您的投资组合今日表现不错。",
+    today: "今日", positions: "当前持仓", topMovers: "涨跌幅榜",
+    noPositions: "暂无持仓",
+  },
+  portfolio: {
+    title: "持仓", subtitle: "仓位、盈亏与资产分配",
+    equity: "总净值", cash: "可用资金", dayPnl: "当日盈亏", totalPnl: "总盈亏",
+    positions: "个持仓", openPositions: "当前持仓", noPositions: "暂无持仓",
+    allocation: "资产分配", total: "合计",
+  },
+  markets: {
+    title: "市场", subtitle: "全品种实时行情",
+    usEquities: "美股", chinaHK: "中港股票", crypto: "加密货币", cnHk: "中港股票",
+    change24h: "24小时涨跌", volume: "成交量",
+  },
+  table: { asset: "资产", qty: "数量", avgCost: "均价", current: "现价", value: "市值", pnl: "盈亏", high: "最高", low: "最低" },
+  badge: { stock: "美股", crypto: "加密", hk: "港股", cn: "A股" },
+  notFound: { title: "页面未找到", sub: "您访问的页面不存在。", back: "返回总览" },
+  loading: "加载中…",
+  error: "发生错误",
+};
+
+export const translations: Record<Lang, Translations> = { en, zh };

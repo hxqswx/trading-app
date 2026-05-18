@@ -1,17 +1,19 @@
 "use client";
 
 import { usePortfolio } from "@/lib/hooks/use-portfolio";
+import { useT } from "@/lib/hooks/use-t";
 import { PortfolioSummaryCards } from "@/components/portfolio/portfolio-summary";
 import { PositionsTable } from "@/components/portfolio/positions-table";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { fmtCurrency, colorClass, fmtPercent } from "@/lib/utils";
 
 export default function PortfolioPage() {
+  const t = useT();
   return (
     <div className="p-6 flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-bold">Portfolio</h1>
-        <p className="text-sm text-[var(--muted)] mt-0.5">Positions, P&amp;L, and allocation</p>
+        <h1 className="text-xl font-bold">{t.portfolio.title}</h1>
+        <p className="text-sm text-[var(--muted)] mt-0.5">{t.portfolio.subtitle}</p>
       </div>
 
       <PortfolioSummaryCards />
@@ -23,6 +25,7 @@ export default function PortfolioPage() {
 
 function AllocationChart() {
   const { portfolio, loading } = usePortfolio();
+  const t = useT();
 
   if (loading || !portfolio) {
     return <Card className="h-48 animate-pulse" />;
@@ -31,13 +34,13 @@ function AllocationChart() {
   const total = portfolio.positions.reduce((s, p) => s + p.marketValue, 0) + portfolio.cash;
   const items = [
     ...portfolio.positions.map((p) => ({
-      label:  p.symbol.replace("USDT", ""),
+      label:  p.symbol.replace("USDT","").replace(/^HK/,""),
       value:  p.marketValue,
       pct:    (p.marketValue / total) * 100,
       type:   p.type,
       pnl:    p.unrealizedPnlPct,
     })),
-    { label: "Cash", value: portfolio.cash, pct: (portfolio.cash / total) * 100, type: "cash" as const, pnl: 0 },
+    { label: t.portfolio.cash, value: portfolio.cash, pct: (portfolio.cash / total) * 100, type: "cash" as const, pnl: 0 },
   ].sort((a, b) => b.value - a.value);
 
   const colors = [
@@ -48,12 +51,11 @@ function AllocationChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Allocation</CardTitle>
-        <span className="text-xs text-[var(--muted)]">Total: {fmtCurrency(total)}</span>
+        <CardTitle>{t.portfolio.allocation}</CardTitle>
+        <span className="text-xs text-[var(--muted)]">{t.portfolio.total}: {fmtCurrency(total)}</span>
       </CardHeader>
 
       <div className="flex gap-6 items-center">
-        {/* Bar */}
         <div className="flex-1 h-6 flex rounded-full overflow-hidden gap-px">
           {items.map((item, i) => (
             <div
@@ -65,7 +67,6 @@ function AllocationChart() {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {items.map((item, i) => (
           <div key={item.label} className="flex items-center gap-2 min-w-0">

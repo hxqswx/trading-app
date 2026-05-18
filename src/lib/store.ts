@@ -2,19 +2,31 @@
 
 import { create } from "zustand";
 import type { Quote, OrderBook, AIAnalysis, WatchlistItem } from "./types";
+import type { Lang } from "./i18n";
 
 export const DEFAULT_WATCHLIST: WatchlistItem[] = [
-  { symbol: "BTCUSDT", name: "Bitcoin",   type: "crypto" },
-  { symbol: "ETHUSDT", name: "Ethereum",  type: "crypto" },
-  { symbol: "SOLUSDT", name: "Solana",    type: "crypto" },
-  { symbol: "AAPL",    name: "Apple",     type: "stock"  },
-  { symbol: "NVDA",    name: "NVIDIA",    type: "stock"  },
-  { symbol: "TSLA",    name: "Tesla",     type: "stock"  },
-  { symbol: "MSFT",    name: "Microsoft", type: "stock"  },
-  { symbol: "GOOGL",   name: "Alphabet",  type: "stock"  },
+  // Crypto
+  { symbol: "BTCUSDT", name: "Bitcoin",       type: "crypto" },
+  { symbol: "ETHUSDT", name: "Ethereum",       type: "crypto" },
+  { symbol: "SOLUSDT", name: "Solana",         type: "crypto" },
+  // US Equities
+  { symbol: "AAPL",    name: "Apple",          type: "stock"  },
+  { symbol: "NVDA",    name: "NVIDIA",         type: "stock"  },
+  { symbol: "TSLA",    name: "Tesla",          type: "stock"  },
+  { symbol: "MSFT",    name: "Microsoft",      type: "stock"  },
+  { symbol: "GOOGL",   name: "Alphabet",       type: "stock"  },
+  // China / HK
+  { symbol: "BABA",    name: "Alibaba",        type: "stock"  },
+  { symbol: "PDD",     name: "Pinduoduo",      type: "stock"  },
+  { symbol: "BIDU",    name: "Baidu",          type: "stock"  },
+  { symbol: "NIO",     name: "NIO",            type: "stock"  },
+  { symbol: "HK0700",  name: "Tencent",        type: "hk"     },
+  { symbol: "HK9988",  name: "Alibaba HK",     type: "hk"     },
+  { symbol: "HK3690",  name: "Meituan",        type: "hk"     },
+  { symbol: "HK1810",  name: "Xiaomi",         type: "hk"     },
 ];
 
-const HISTORY_LIMIT = 60; // keep last 60 price points per symbol
+const HISTORY_LIMIT = 60;
 
 interface TradingStore {
   activeSymbol: string;
@@ -24,7 +36,6 @@ interface TradingStore {
   updateQuote:  (q: Quote) => void;
   updateQuotes: (qs: Quote[]) => void;
 
-  /** Ring buffer of recent prices per symbol (for sparklines) */
   priceHistory: Record<string, number[]>;
   addPriceHistory: (symbol: string, price: number) => void;
 
@@ -38,9 +49,11 @@ interface TradingStore {
   addToWatchlist:      (item: WatchlistItem) => void;
   removeFromWatchlist: (symbol: string) => void;
 
-  /** UI mode persisted for session */
   tradeMode: "simple" | "pro";
   setTradeMode: (m: "simple" | "pro") => void;
+
+  lang: Lang;
+  setLang: (l: Lang) => void;
 }
 
 export const useTradingStore = create<TradingStore>((set) => ({
@@ -81,4 +94,7 @@ export const useTradingStore = create<TradingStore>((set) => ({
 
   tradeMode: "simple",
   setTradeMode: (tradeMode) => set({ tradeMode }),
+
+  lang: "en",
+  setLang: (lang) => set({ lang }),
 }));
