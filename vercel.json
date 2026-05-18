@@ -4,8 +4,8 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "env": {
-    "ALPACA_KEY":       "@alpaca_key",
-    "ALPACA_SECRET":    "@alpaca_secret",
-    "ANTHROPIC_API_KEY":"@anthropic_api_key"
+    //"ALPACA_KEY":       "@alpaca_key",
+    //"ALPACA_SECRET":    "@alpaca_secret",
+    //"ANTHROPIC_API_KEY":"@anthropic_api_key"
   }
 }
