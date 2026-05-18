@@ -95,9 +95,12 @@ export function UserMenu() {
     setSigning(true);
     setOpen(false);
     try {
-      await signOut({ callbackUrl: "/sign-in" });
+      // NextAuth v5: signOut clears the session cookie then navigates
+      await signOut({ redirect: false });
     } catch {
-      // signOut navigates away — error here means network issue
+      // Ignore errors from the navigation itself
+    } finally {
+      // Hard navigate so the proxy re-evaluates auth and shows sign-in
       window.location.href = "/sign-in";
     }
   }
