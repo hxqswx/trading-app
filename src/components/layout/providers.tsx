@@ -1,5 +1,6 @@
 "use client";
 
+import { SessionProvider } from "next-auth/react";
 import { useSimulator } from "@/lib/hooks/use-simulator";
 
 function RuntimeHooks() {
@@ -9,9 +10,9 @@ function RuntimeHooks() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <SessionProvider>
       <RuntimeHooks />
       {children}
-    </>
+    </SessionProvider>
   );
 }

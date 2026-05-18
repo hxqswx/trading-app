@@ -3,7 +3,7 @@ export type Lang = "en" | "zh";
 export interface Translations {
   nav: {
     dashboard: string; markets: string; portfolio: string;
-    notifications: string; settings: string;
+    strategies: string; notifications: string; settings: string;
   };
   topbar: { live: string };
   watchlist: {
@@ -63,12 +63,20 @@ export interface Translations {
   };
   badge: { stock: string; crypto: string; hk: string; cn: string };
   notFound: { title: string; sub: string; back: string };
+  strategies: {
+    title: string; subtitle: string; tabLabel: string;
+    asset: string; signals: string; consensus: string; trade: string; refresh: string;
+    strongBuy: string; buy: string; hold: string; sell: string; strongSell: string;
+  };
+  auth: {
+    signIn: string; signOut: string; profile: string; demoHint: string;
+  };
   loading: string;
   error: string;
 }
 
 const en: Translations = {
-  nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", notifications: "Notifications", settings: "Settings" },
+  nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", strategies: "Strategies", notifications: "Notifications", settings: "Settings" },
   topbar: { live: "Live" },
   watchlist: { title: "Watchlist", search: "Search…", crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares" },
   trade: {
@@ -116,12 +124,23 @@ const en: Translations = {
   table: { asset: "Asset", qty: "Qty", avgCost: "Avg Cost", current: "Current", value: "Market Value", pnl: "P&L", high: "High", low: "Low" },
   badge: { stock: "US", crypto: "Crypto", hk: "HK", cn: "A股" },
   notFound: { title: "Page not found", sub: "The page you're looking for doesn't exist.", back: "Back to Dashboard" },
+  strategies: {
+    title: "Strategy Screener",
+    subtitle: "Six institutional-grade signals across all assets",
+    tabLabel: "Strategy",
+    asset: "Asset", signals: "Strategy Signals", consensus: "Consensus", trade: "Trade", refresh: "Refresh",
+    strongBuy: "STRONG BUY", buy: "BUY", hold: "HOLD", sell: "SELL", strongSell: "STRONG SELL",
+  },
+  auth: {
+    signIn: "Sign In", signOut: "Sign Out", profile: "Profile",
+    demoHint: "Demo · any email · password: demo123",
+  },
   loading: "Loading…",
   error: "Something went wrong",
 };
 
 const zh: Translations = {
-  nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", notifications: "通知", settings: "设置" },
+  nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", strategies: "策略", notifications: "通知", settings: "设置" },
   topbar: { live: "实时" },
   watchlist: { title: "自选股", search: "搜索…", crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股" },
   trade: {
@@ -169,6 +188,17 @@ const zh: Translations = {
   table: { asset: "资产", qty: "数量", avgCost: "均价", current: "现价", value: "市值", pnl: "盈亏", high: "最高", low: "最低" },
   badge: { stock: "美股", crypto: "加密", hk: "港股", cn: "A股" },
   notFound: { title: "页面未找到", sub: "您访问的页面不存在。", back: "返回总览" },
+  strategies: {
+    title: "策略筛选器",
+    subtitle: "六大机构级信号，覆盖全品种资产",
+    tabLabel: "策略",
+    asset: "资产", signals: "策略信号", consensus: "综合评级", trade: "交易", refresh: "刷新",
+    strongBuy: "强烈买入", buy: "买入", hold: "观望", sell: "卖出", strongSell: "强烈卖出",
+  },
+  auth: {
+    signIn: "登录", signOut: "退出登录", profile: "个人资料",
+    demoHint: "演示账号 · 任意邮箱 · 密码：demo123",
+  },
   loading: "加载中…",
   error: "发生错误",
 };

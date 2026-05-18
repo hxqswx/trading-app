@@ -11,12 +11,13 @@ import { AIPanel } from "@/components/ai-panel/ai-panel";
 import { Watchlist } from "@/components/watchlist/watchlist";
 import { Card } from "@/components/ui/card";
 import { ASSET_META, currencySymbol } from "@/lib/mock";
-import { BarChart2, BookOpen, ArrowUpDown, Sparkles } from "lucide-react";
+import { BarChart2, BookOpen, ArrowUpDown, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StrategyPanel } from "@/components/strategies/strategy-panel";
 
 interface TradeViewProps { symbol: string }
 
-type MobileTab = "chart" | "book" | "trade" | "ai";
+type MobileTab = "chart" | "book" | "trade" | "ai" | "strategy";
 
 export function TradeView({ symbol }: TradeViewProps) {
   const { setActiveSymbol } = useTradingStore();
@@ -26,10 +27,11 @@ export function TradeView({ symbol }: TradeViewProps) {
   useEffect(() => { setActiveSymbol(symbol); }, [symbol, setActiveSymbol]);
 
   const TABS: { id: MobileTab; icon: React.ReactNode; label: string }[] = [
-    { id: "chart", icon: <BarChart2 size={16} />,    label: t.chart.title                },
-    { id: "book",  icon: <BookOpen size={16} />,     label: t.orderbook.title            },
-    { id: "trade", icon: <ArrowUpDown size={16} />,  label: t.trade.placeOrder           },
-    { id: "ai",    icon: <Sparkles size={16} />,     label: t.ai.title                   },
+    { id: "chart",    icon: <BarChart2 size={15} />,   label: t.chart.title          },
+    { id: "book",     icon: <BookOpen size={15} />,    label: t.orderbook.title      },
+    { id: "trade",    icon: <ArrowUpDown size={15} />, label: t.trade.placeOrder     },
+    { id: "ai",       icon: <Sparkles size={15} />,    label: t.ai.title             },
+    { id: "strategy", icon: <TrendingUp size={15} />,  label: t.strategies.tabLabel  },
   ];
 
   return (
@@ -88,6 +90,11 @@ export function TradeView({ symbol }: TradeViewProps) {
               <AIPanel symbol={symbol} />
             </div>
           )}
+          {tab === "strategy" && (
+            <div className="p-3">
+              <StrategyPanel symbol={symbol} />
+            </div>
+          )}
         </div>
 
         {/* ── md+ layout ─────────────────────────────────────────────────── */}
@@ -112,15 +119,43 @@ export function TradeView({ symbol }: TradeViewProps) {
         </div>
       </div>
 
-      {/* ── Right: trade + AI — desktop only ────────────────────────────── */}
-      <aside className="w-72 border-l border-[var(--border)] shrink-0 hidden md:flex flex-col overflow-hidden">
-        <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
-          <TradePanel symbol={symbol} />
-          <AIPanel symbol={symbol} />
-        </div>
-      </aside>
+      {/* ── Right: trade + AI/Strategy — desktop only ───────────────────── */}
+      <RightPanel symbol={symbol} t={t} />
 
     </div>
+  );
+}
+
+// ── Desktop right panel with AI / Strategy tab switcher ──────────────────
+function RightPanel({ symbol, t }: { symbol: string; t: ReturnType<typeof useT> }) {
+  const [rightTab, setRightTab] = useState<"ai" | "strategy">("ai");
+  return (
+    <aside className="w-72 border-l border-[var(--border)] shrink-0 hidden md:flex flex-col overflow-hidden">
+      {/* Tab switcher */}
+      <div className="flex border-b border-[var(--border)] shrink-0">
+        {[
+          { id: "ai"       as const, icon: <Sparkles size={13} />,   label: t.ai.title           },
+          { id: "strategy" as const, icon: <TrendingUp size={13} />, label: t.strategies.tabLabel },
+        ].map(({ id, icon, label }) => (
+          <button key={id} onClick={() => setRightTab(id)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors relative",
+              rightTab === id ? "text-[var(--accent)]" : "text-[var(--muted)]"
+            )}>
+            {icon}{label}
+            {rightTab === id && (
+              <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--accent)] rounded-full" />
+            )}
+          </button>
+        ))}
+      </div>
+      {/* Panel content */}
+      <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
+        <TradePanel symbol={symbol} />
+        {rightTab === "ai"       && <AIPanel symbol={symbol} />}
+        {rightTab === "strategy" && <StrategyPanel symbol={symbol} />}
+      </div>
+    </aside>
   );
 }
 

@@ -83,3 +83,35 @@ export interface TradeOrder {
   limitPrice?: number;
   stopPrice?: number;
 }
+
+// ── Strategies ─────────────────────────────────────────────────────────────
+export type Signal = "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL";
+
+export interface StrategyResult {
+  id:            string;
+  name:          string;
+  nameZh:        string;
+  signal:        Signal;
+  strength:      1 | 2 | 3 | 4 | 5;
+  reason:        string;
+  reasonZh:      string;
+  description:   string;
+  descriptionZh: string;
+  values:        Record<string, number | string>;
+}
+
+export interface ConsensusResult {
+  signal:  Signal;
+  score:   number;
+  bullish: number;
+  bearish: number;
+  neutral: number;
+}
+
+export interface StrategiesResponse {
+  symbol:    string;
+  strategies: StrategyResult[];
+  consensus: ConsensusResult;
+  candleCount: number;
+  timestamp: number;
+}

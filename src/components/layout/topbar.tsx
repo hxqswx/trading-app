@@ -7,6 +7,7 @@ import { Activity, TrendingUp, TrendingDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Quote } from "@/lib/types";
 import { currencySymbol } from "@/lib/mock";
+import { UserMenu } from "@/components/auth/user-menu";
 
 export function Topbar() {
   const { activeSymbol, quotes, lang, setLang } = useTradingStore();
@@ -55,6 +56,9 @@ export function Topbar() {
       >
         {lang === "en" ? "中" : "EN"}
       </button>
+
+      {/* User menu — visible on all breakpoints */}
+      <UserMenu />
     </header>
   );
 }
