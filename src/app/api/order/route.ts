@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { placeOrder } from "@/lib/alpaca";
 import type { TradeOrder } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -9,18 +8,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "symbol, qty, side, type required" }, { status: 400 });
     }
 
-    const result = await placeOrder({
+    // Simulate a small processing delay
+    await new Promise((r) => setTimeout(r, 400));
+
+    // Return a simulated order confirmation
+    return NextResponse.json({
+      id:         `mock-${Date.now()}`,
       symbol:     order.symbol,
-      qty:        order.qty,
       side:       order.side,
       type:       order.type,
-      limitPrice: order.limitPrice,
-      stopPrice:  order.stopPrice,
+      qty:        order.qty,
+      status:     "filled",
+      filled_qty: order.qty,
+      filled_avg_price: order.limitPrice ?? null,
+      created_at: new Date().toISOString(),
     });
-
-    return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

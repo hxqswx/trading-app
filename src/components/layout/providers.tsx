@@ -1,10 +1,9 @@
 "use client";
 
-import { useQuotes } from "@/lib/hooks/use-quotes";
+import { useSimulator } from "@/lib/hooks/use-simulator";
 
-/** Mounts all global real-time hooks once at the root. */
 function RuntimeHooks() {
-  useQuotes();
+  useSimulator(); // drives all real-time price updates
   return null;
 }
 

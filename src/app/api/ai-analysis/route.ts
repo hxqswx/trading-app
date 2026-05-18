@@ -1,66 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import type { AIAnalysis, Quote, Candle } from "@/lib/types";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { MOCK_AI_ANALYSES } from "@/lib/mock";
+import type { AIAnalysis, Quote } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { symbol: string; quote: Quote; candles: Candle[] };
-    const { symbol, quote, candles } = body;
+    const { symbol, quote } = await req.json() as { symbol: string; quote: Quote };
+    if (!symbol) return NextResponse.json({ error: "symbol required" }, { status: 400 });
 
-    if (!symbol || !quote) {
-      return NextResponse.json({ error: "symbol and quote required" }, { status: 400 });
+    // Try Claude API first if key is present
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (apiKey && apiKey !== "your_anthropic_api_key_here" && quote) {
+      try {
+        const { default: Anthropic } = await import("@anthropic-ai/sdk");
+        const client = new Anthropic({ apiKey });
+
+        const prompt = `You are a professional quantitative analyst. Analyze ${symbol} at $${quote.price.toFixed(2)} (${quote.changePct >= 0 ? "+" : ""}${quote.changePct.toFixed(2)}% today). 24h High: $${quote.high.toFixed(2)}, Low: $${quote.low.toFixed(2)}.
+
+Respond ONLY with raw JSON (no markdown) matching this exact shape:
+{"sentiment":"bullish"|"bearish"|"neutral","summary":"2-3 sentence analysis","keyLevels":{"support":number,"resistance":number},"signals":["signal1","signal2","signal3"],"riskLevel":"low"|"medium"|"high"}`;
+
+        const msg = await client.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 400,
+          messages: [{ role: "user", content: prompt }],
+        });
+        const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
+        const parsed = JSON.parse(text) as Omit<AIAnalysis, "symbol" | "timestamp">;
+        return NextResponse.json({ symbol, timestamp: Date.now(), ...parsed });
+      } catch {
+        // Fall through to mock
+      }
     }
 
-    const recentCandles = candles?.slice(-20) ?? [];
-    const candleSummary = recentCandles
-      .map((c) => `${new Date(c.time * 1000).toISOString().slice(0, 16)} O:${c.open} H:${c.high} L:${c.low} C:${c.close} V:${c.volume}`)
-      .join("\n");
+    // Return pre-canned mock analysis
+    const mock = MOCK_AI_ANALYSES[symbol];
+    if (!mock) return NextResponse.json({ error: `No analysis available for ${symbol}` }, { status: 404 });
 
-    const prompt = `You are a professional quantitative analyst. Analyze the following market data for ${symbol} and provide a concise trading analysis.
-
-## Current Market Data
-- Symbol: ${symbol}
-- Current Price: $${quote.price}
-- 24h Change: ${quote.changePct.toFixed(2)}%
-- 24h High: $${quote.high}
-- 24h Low: $${quote.low}
-- Volume: ${quote.volume.toLocaleString()}
-
-## Recent OHLCV Data (last 20 bars)
-${candleSummary}
-
-Respond with a JSON object (no markdown, just raw JSON) with this exact structure:
-{
-  "sentiment": "bullish" | "bearish" | "neutral",
-  "summary": "2-3 sentence market analysis",
-  "keyLevels": {
-    "support": <number>,
-    "resistance": <number>
-  },
-  "signals": ["signal1", "signal2", "signal3"],
-  "riskLevel": "low" | "medium" | "high"
-}`;
-
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
-    const parsed = JSON.parse(text.trim()) as Omit<AIAnalysis, "symbol" | "timestamp">;
-
-    const analysis: AIAnalysis = {
-      symbol,
-      timestamp: Date.now(),
-      ...parsed,
-    };
-
+    const analysis: AIAnalysis = { symbol, timestamp: Date.now(), ...mock };
+    // Add a small simulated delay so it feels like it's "thinking"
+    await new Promise((r) => setTimeout(r, 900));
     return NextResponse.json(analysis);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

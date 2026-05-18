@@ -4,52 +4,63 @@ import { create } from "zustand";
 import type { Quote, OrderBook, AIAnalysis, WatchlistItem } from "./types";
 
 export const DEFAULT_WATCHLIST: WatchlistItem[] = [
-  { symbol: "AAPL",    name: "Apple",      type: "stock"  },
-  { symbol: "TSLA",    name: "Tesla",       type: "stock"  },
-  { symbol: "NVDA",    name: "NVIDIA",      type: "stock"  },
-  { symbol: "MSFT",    name: "Microsoft",   type: "stock"  },
-  { symbol: "GOOGL",   name: "Alphabet",    type: "stock"  },
-  { symbol: "BTCUSDT", name: "Bitcoin",     type: "crypto" },
-  { symbol: "ETHUSDT", name: "Ethereum",    type: "crypto" },
-  { symbol: "SOLUSDT", name: "Solana",      type: "crypto" },
+  { symbol: "BTCUSDT", name: "Bitcoin",   type: "crypto" },
+  { symbol: "ETHUSDT", name: "Ethereum",  type: "crypto" },
+  { symbol: "SOLUSDT", name: "Solana",    type: "crypto" },
+  { symbol: "AAPL",    name: "Apple",     type: "stock"  },
+  { symbol: "NVDA",    name: "NVIDIA",    type: "stock"  },
+  { symbol: "TSLA",    name: "Tesla",     type: "stock"  },
+  { symbol: "MSFT",    name: "Microsoft", type: "stock"  },
+  { symbol: "GOOGL",   name: "Alphabet",  type: "stock"  },
 ];
 
+const HISTORY_LIMIT = 60; // keep last 60 price points per symbol
+
 interface TradingStore {
-  // Active symbol
   activeSymbol: string;
   setActiveSymbol: (s: string) => void;
 
-  // Quotes map  symbol -> Quote
   quotes: Record<string, Quote>;
-  updateQuote: (q: Quote) => void;
+  updateQuote:  (q: Quote) => void;
   updateQuotes: (qs: Quote[]) => void;
 
-  // OrderBook
+  /** Ring buffer of recent prices per symbol (for sparklines) */
+  priceHistory: Record<string, number[]>;
+  addPriceHistory: (symbol: string, price: number) => void;
+
   orderBook: OrderBook | null;
   setOrderBook: (ob: OrderBook) => void;
 
-  // AI Analysis
   aiAnalysis: Record<string, AIAnalysis>;
   setAIAnalysis: (a: AIAnalysis) => void;
 
-  // Watchlist
   watchlist: WatchlistItem[];
-  addToWatchlist: (item: WatchlistItem) => void;
+  addToWatchlist:      (item: WatchlistItem) => void;
   removeFromWatchlist: (symbol: string) => void;
+
+  /** UI mode persisted for session */
+  tradeMode: "simple" | "pro";
+  setTradeMode: (m: "simple" | "pro") => void;
 }
 
 export const useTradingStore = create<TradingStore>((set) => ({
   activeSymbol: "BTCUSDT",
-
   setActiveSymbol: (activeSymbol) => set({ activeSymbol }),
 
   quotes: {},
-  updateQuote: (q) =>
-    set((s) => ({ quotes: { ...s.quotes, [q.symbol]: q } })),
+  updateQuote:  (q) => set((s) => ({ quotes: { ...s.quotes, [q.symbol]: q } })),
   updateQuotes: (qs) =>
     set((s) => ({
       quotes: { ...s.quotes, ...Object.fromEntries(qs.map((q) => [q.symbol, q])) },
     })),
+
+  priceHistory: {},
+  addPriceHistory: (symbol, price) =>
+    set((s) => {
+      const prev = s.priceHistory[symbol] ?? [];
+      const next = prev.length >= HISTORY_LIMIT ? [...prev.slice(1), price] : [...prev, price];
+      return { priceHistory: { ...s.priceHistory, [symbol]: next } };
+    }),
 
   orderBook: null,
   setOrderBook: (orderBook) => set({ orderBook }),
@@ -67,4 +78,7 @@ export const useTradingStore = create<TradingStore>((set) => ({
     })),
   removeFromWatchlist: (symbol) =>
     set((s) => ({ watchlist: s.watchlist.filter((w) => w.symbol !== symbol) })),
+
+  tradeMode: "simple",
+  setTradeMode: (tradeMode) => set({ tradeMode }),
 }));
