@@ -11,15 +11,15 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { nextUrl, auth: session } = req;
   const isLoggedIn   = !!session;
-  const isSignInPage = nextUrl.pathname === "/sign-in";
+  const isAuthPage   = nextUrl.pathname === "/sign-in" || nextUrl.pathname === "/sign-up";
 
-  // Already signed in → keep away from sign-in page
-  if (isLoggedIn && isSignInPage) {
+  // Already signed in → keep away from auth pages
+  if (isLoggedIn && isAuthPage) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
   // Not signed in → redirect to sign-in, preserve callbackUrl
-  if (!isLoggedIn && !isSignInPage) {
+  if (!isLoggedIn && !isAuthPage) {
     const loginUrl = new URL("/sign-in", req.url);
     loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
     return NextResponse.redirect(loginUrl);

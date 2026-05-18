@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * /sign-in — Authentication page.
+ * /sign-in — Unified authentication page.
  *
- * Renders OAuth buttons (GitHub, Google) when env vars are configured,
- * plus a demo credentials form (any email + password "demo123").
- * After successful sign-in the user is redirected to callbackUrl or "/".
+ * Two tabs: "Sign In" and "Create Account".
+ * Left panel shows branding on desktop (lg+), right panel shows the form.
+ *
+ * Sign-in  → NextAuth credentials or OAuth.
+ * Register → POST /api/auth/register, then auto-sign-in.
  */
-import { useState, useTransition } from "react";
+import { useState, useTransition, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { Eye, EyeOff, TrendingUp, Zap, Shield, BarChart2 } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Eye, EyeOff, TrendingUp, Zap, Shield, BarChart2, User, Mail, Lock, ArrowRight, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ── Icons ──────────────────────────────────────────────────────────────────
+// ── Brand icons ────────────────────────────────────────────────────────────
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden>
@@ -34,56 +36,120 @@ function GitHubIcon() {
   );
 }
 
-// ── Feature bullets shown beside the form ─────────────────────────────────
-const FEATURES = [
-  { icon: TrendingUp, text: "Real-time multi-asset quotes" },
-  { icon: BarChart2,  text: "6 professional trading strategies" },
-  { icon: Zap,        text: "AI-powered market analysis" },
-  { icon: Shield,     text: "Paper trading — no real money" },
-];
+// ── Field input with icon ──────────────────────────────────────────────────
+function Field({
+  label, type = "text", value, onChange, placeholder, icon: Icon,
+  autoComplete, required = true,
+  rightEl,
+}: {
+  label: string; type?: string; value: string;
+  onChange: (v: string) => void; placeholder?: string;
+  icon: React.ElementType; autoComplete?: string;
+  required?: boolean; rightEl?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-[var(--muted)]">{label}</label>
+      <div className="relative">
+        <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
+        <input
+          type={type} value={value} required={required}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-10 pl-9 pr-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+        />
+        {rightEl && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2">{rightEl}</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
-// ── Inner form (needs useSearchParams, must be wrapped in Suspense) ────────
-function SignInForm() {
-  const params      = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") ?? "/";
+// ── Password field helper ──────────────────────────────────────────────────
+function PasswordField({
+  label, value, onChange, autoComplete, placeholder,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  autoComplete?: string; placeholder?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <Field
+      label={label} type={show ? "text" : "password"} value={value}
+      onChange={onChange} icon={Lock} autoComplete={autoComplete}
+      placeholder={placeholder}
+      rightEl={
+        <button type="button" tabIndex={-1}
+          onClick={() => setShow(!show)}
+          className="text-[var(--muted)] hover:text-[var(--foreground)]">
+          {show ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+      }
+    />
+  );
+}
 
-  const [email,     setEmail]     = useState("demo@tradeai.app");
-  const [password,  setPassword]  = useState("demo123");
-  const [showPass,  setShowPass]  = useState(false);
+// ── Error message ─────────────────────────────────────────────────────────
+function ErrorBox({ msg }: { msg: string }) {
+  return (
+    <p className="text-xs text-[var(--red)] bg-[rgba(248,81,73,0.08)] border border-[rgba(248,81,73,0.2)] rounded-lg px-3 py-2 leading-relaxed">
+      {msg}
+    </p>
+  );
+}
+
+// ── Password strength bar ─────────────────────────────────────────────────
+function PasswordStrength({ password }: { password: string }) {
+  const len   = password.length;
+  const score = len === 0 ? 0 : len < 6 ? 1 : len < 10 ? 2 : /[A-Z]/.test(password) && /[0-9]/.test(password) ? 4 : 3;
+  const labels = ["", "Weak", "Fair", "Good", "Strong"];
+  const colors = ["", "var(--red)", "#f0a500", "#58a6ff", "var(--green)"];
+  if (!password) return null;
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex-1 h-1 rounded-full transition-colors duration-300"
+            style={{ background: i <= score ? colors[score] : "var(--surface-2)" }} />
+        ))}
+      </div>
+      <p className="text-[10px]" style={{ color: colors[score] }}>{labels[score]}</p>
+    </div>
+  );
+}
+
+// ── Sign-In form ──────────────────────────────────────────────────────────
+function SignInForm({ callbackUrl }: { callbackUrl: string }) {
+  const [email,     setEmail]     = useState("");
+  const [password,  setPassword]  = useState("");
   const [error,     setError]     = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // ── GitHub / Google OAuth ────────────────────────────────────────────────
+  const hasGitHub = process.env.NEXT_PUBLIC_HAS_GITHUB === "true";
+  const hasGoogle = process.env.NEXT_PUBLIC_HAS_GOOGLE === "true";
+  const hasOAuth  = hasGitHub || hasGoogle;
+
   function oauthSignIn(provider: "github" | "google") {
     startTransition(async () => {
-      try {
-        await signIn(provider, { callbackUrl });
-      } catch {
-        setError("OAuth sign-in failed. Check provider configuration.");
-      }
+      try { await signIn(provider, { callbackUrl }); }
+      catch { setError("OAuth sign-in failed. Check provider configuration."); }
     });
   }
 
-  // ── Credentials (demo) ───────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await signIn("credentials", {
-        email, password,
-        redirect: false,
-      });
+      const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
-        setError("Invalid credentials. Use password: demo123");
+        setError("Incorrect email or password. Try demo123 for the demo account.");
       } else {
         window.location.href = callbackUrl;
       }
     });
   }
-
-  const hasGitHub = process.env.NEXT_PUBLIC_HAS_GITHUB === "true";
-  const hasGoogle = process.env.NEXT_PUBLIC_HAS_GOOGLE === "true";
-  const hasOAuth  = hasGitHub || hasGoogle;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -93,102 +159,191 @@ function SignInForm() {
           <div className="grid gap-2" style={{ gridTemplateColumns: hasGitHub && hasGoogle ? "1fr 1fr" : "1fr" }}>
             {hasGitHub && (
               <button type="button" onClick={() => oauthSignIn("github")} disabled={isPending}
-                className="flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground)] text-sm font-medium hover:bg-[var(--surface)] transition-colors disabled:opacity-50">
+                className="flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm font-medium hover:bg-[var(--surface)] transition-colors disabled:opacity-50">
                 <GitHubIcon /> GitHub
               </button>
             )}
             {hasGoogle && (
               <button type="button" onClick={() => oauthSignIn("google")} disabled={isPending}
-                className="flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground)] text-sm font-medium hover:bg-[var(--surface)] transition-colors disabled:opacity-50">
+                className="flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm font-medium hover:bg-[var(--surface)] transition-colors disabled:opacity-50">
                 <GoogleIcon /> Google
               </button>
             )}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-[11px] text-[var(--muted)]">or continue with demo</span>
+            <span className="text-[11px] text-[var(--muted)]">or</span>
             <div className="flex-1 h-px bg-[var(--border)]" />
           </div>
         </>
       )}
 
-      {/* Email */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-[var(--muted)]">Email</label>
-        <input
-          type="email" required autoComplete="email"
-          value={email} onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
-        />
-      </div>
+      <Field label="Email" type="email" value={email} onChange={setEmail}
+        placeholder="you@example.com" icon={Mail} autoComplete="email" />
 
-      {/* Password */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-[var(--muted)]">Password</label>
-        <div className="relative">
-          <input
-            type={showPass ? "text" : "password"} required autoComplete="current-password"
-            value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-10 px-3 pr-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
-          />
-          <button type="button" onClick={() => setShowPass(!showPass)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)]">
-            {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-        </div>
-      </div>
+      <PasswordField label="Password" value={password} onChange={setPassword}
+        autoComplete="current-password" />
 
-      {/* Error */}
-      {error && (
-        <p className="text-xs text-[var(--red)] bg-[rgba(248,81,73,0.08)] border border-[rgba(248,81,73,0.2)] rounded-lg px-3 py-2">
-          {error}
-        </p>
-      )}
+      {error && <ErrorBox msg={error} />}
 
-      {/* Submit */}
       <button type="submit" disabled={isPending}
         className={cn(
-          "w-full h-10 rounded-lg font-medium text-sm transition-all",
+          "w-full h-10 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2",
           "bg-[var(--accent)] text-white hover:opacity-90 active:scale-[0.98]",
           "disabled:opacity-50 disabled:cursor-not-allowed"
         )}>
-        {isPending ? "Signing in…" : "Sign in"}
+        {isPending ? "Signing in…" : <><span>Sign in</span><ArrowRight size={14} /></>}
       </button>
 
       {/* Demo hint */}
       <p className="text-center text-[11px] text-[var(--muted)]">
-        Demo account · any email · password:{" "}
+        Demo: any email ·{" "}
         <button type="button" className="font-mono text-[var(--accent)] hover:underline"
-          onClick={() => setPassword("demo123")}>
-          demo123
+          onClick={() => { setEmail("demo@tradeai.app"); setPassword("demo123"); }}>
+          fill demo credentials
         </button>
       </p>
     </form>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────
-export default function SignInPage() {
+// ── Register form ─────────────────────────────────────────────────────────
+function RegisterForm({ callbackUrl, onSuccess }: { callbackUrl: string; onSuccess?: () => void }) {
+  const router = useRouter();
+  const [name,     setName]     = useState("");
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm,  setConfirm]  = useState("");
+  const [error,    setError]    = useState<string | null>(null);
+  const [done,     setDone]     = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    startTransition(async () => {
+      // 1. Register
+      const res = await fetch("/api/auth/register", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? "Registration failed. Please try again.");
+        return;
+      }
+
+      // 2. Auto-sign in with credentials
+      const signInResult = await signIn("credentials", { email, password, redirect: false });
+      if (signInResult?.error) {
+        // Registered OK but sign-in failed — redirect to sign-in page
+        router.push(`/sign-in?registered=1&email=${encodeURIComponent(email)}`);
+        return;
+      }
+
+      setDone(true);
+      setTimeout(() => { window.location.href = callbackUrl; }, 1200);
+    });
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+        <div className="w-12 h-12 rounded-full bg-[rgba(63,185,80,0.12)] flex items-center justify-center">
+          <CheckCircle2 size={24} className="text-[var(--green)]" />
+        </div>
+        <p className="font-semibold">Account created!</p>
+        <p className="text-sm text-[var(--muted)]">Redirecting to your dashboard…</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <Field label="Full name" value={name} onChange={setName}
+        placeholder="Alex Smith" icon={User} autoComplete="name" />
+
+      <Field label="Email" type="email" value={email} onChange={setEmail}
+        placeholder="you@example.com" icon={Mail} autoComplete="email" />
+
+      <div className="space-y-1">
+        <PasswordField label="Password" value={password} onChange={setPassword}
+          autoComplete="new-password" placeholder="Min. 6 characters" />
+        <PasswordStrength password={password} />
+      </div>
+
+      <PasswordField label="Confirm password" value={confirm} onChange={setConfirm}
+        autoComplete="new-password" placeholder="Repeat your password" />
+
+      {error && <ErrorBox msg={error} />}
+
+      <button type="submit" disabled={isPending}
+        className={cn(
+          "w-full h-10 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2",
+          "bg-[var(--accent)] text-white hover:opacity-90 active:scale-[0.98]",
+          "disabled:opacity-50 disabled:cursor-not-allowed"
+        )}>
+        {isPending ? "Creating account…" : <><span>Create account</span><ArrowRight size={14} /></>}
+      </button>
+
+      <p className="text-center text-[11px] text-[var(--muted)]">
+        By registering you agree to use this platform for paper trading only.
+      </p>
+    </form>
+  );
+}
+
+// ── Features list (left panel) ────────────────────────────────────────────
+const FEATURES = [
+  { icon: TrendingUp, text: "Real-time multi-asset quotes" },
+  { icon: BarChart2,  text: "6 professional trading strategies" },
+  { icon: Zap,        text: "AI-powered market analysis"       },
+  { icon: Shield,     text: "Paper trading — no real money"    },
+];
+
+// ── Inner component (needs useSearchParams → must be in Suspense) ─────────
+function AuthPageInner() {
+  const params      = useSearchParams();
+  const callbackUrl = params.get("callbackUrl") ?? "/";
+  const initEmail   = params.get("email") ?? "";
+  const registered  = params.get("registered") === "1";
+  const initTab     = params.get("tab") === "register" ? "register" : "signin";
+
+  // Tab: "signin" | "register"
+  const [tab, setTab] = useState<"signin" | "register">(registered ? "signin" : initTab);
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex">
-      {/* ── Left panel — branding (hidden on small screens) ───────────── */}
-      <div className="hidden lg:flex flex-col justify-between w-96 bg-[var(--surface)] border-r border-[var(--border)] p-10 shrink-0">
+
+      {/* ── Left panel — branding (desktop only) ─────────────────────── */}
+      <div className="hidden lg:flex flex-col justify-between w-[420px] bg-[var(--surface)] border-r border-[var(--border)] p-10 shrink-0">
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[var(--accent)] flex items-center justify-center">
             <span className="text-white font-bold text-base">T</span>
           </div>
-          <span className="font-semibold text-lg tracking-tight">TradeAI</span>
+          <span className="font-bold text-lg tracking-tight">TradeAI</span>
         </div>
 
-        {/* Feature list */}
-        <div className="space-y-6">
+        {/* Copy */}
+        <div className="space-y-8">
           <div>
-            <h2 className="text-2xl font-bold leading-snug">
+            <h2 className="text-3xl font-bold leading-tight">
               Professional trading.<br />
               <span className="text-[var(--accent)]">AI-powered insights.</span>
             </h2>
-            <p className="mt-2 text-sm text-[var(--muted)] leading-relaxed">
+            <p className="mt-3 text-sm text-[var(--muted)] leading-relaxed">
               Multi-asset paper trading with real-time market data, six institutional-grade
               strategies, and AI analysis — all in one place.
             </p>
@@ -200,42 +355,115 @@ export default function SignInPage() {
                 <div className="w-8 h-8 rounded-lg bg-[rgba(88,166,255,0.1)] flex items-center justify-center shrink-0">
                   <Icon size={15} className="text-[var(--accent)]" />
                 </div>
-                <span className="text-sm text-[var(--foreground)]">{text}</span>
+                <span className="text-sm">{text}</span>
               </li>
             ))}
           </ul>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Assets", value: "21+" },
+              { label: "Strategies", value: "6" },
+              { label: "Paper $", value: "$25k" },
+            ].map(({ label, value }) => (
+              <div key={label} className="text-center p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                <p className="text-lg font-bold text-[var(--accent)]">{value}</p>
+                <p className="text-[10px] text-[var(--muted)] mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <p className="text-[11px] text-[var(--muted)]">
-          Paper trading only · no real funds at risk
-        </p>
+        <p className="text-[11px] text-[var(--muted)]">Paper trading only · no real funds at risk</p>
       </div>
 
-      {/* ── Right panel — form ────────────────────────────────────────── */}
+      {/* ── Right panel — auth form ──────────────────────────────────── */}
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm space-y-6">
+        <div className="w-full max-w-sm">
+
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center">
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center">
               <span className="text-white font-bold text-sm">T</span>
             </div>
-            <span className="font-semibold">TradeAI</span>
+            <span className="font-bold text-base tracking-tight">TradeAI</span>
+          </div>
+
+          {/* Registered banner */}
+          {registered && (
+            <div className="mb-4 flex items-center gap-2 text-sm text-[var(--green)] bg-[rgba(63,185,80,0.08)] border border-[rgba(63,185,80,0.2)] rounded-xl px-4 py-3">
+              <CheckCircle2 size={15} className="shrink-0" />
+              Account created — please sign in.
+            </div>
+          )}
+
+          {/* Tab switcher */}
+          <div className="flex rounded-xl border border-[var(--border)] overflow-hidden mb-6 bg-[var(--surface-2)]">
+            {(["signin", "register"] as const).map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={cn(
+                  "flex-1 py-2.5 text-sm font-semibold transition-colors",
+                  tab === t
+                    ? "bg-[var(--accent)] text-white"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                )}>
+                {t === "signin" ? "Sign In" : "Create Account"}
+              </button>
+            ))}
           </div>
 
           {/* Heading */}
-          <div>
-            <h1 className="text-xl font-bold">Sign in</h1>
+          <div className="mb-5">
+            <h1 className="text-xl font-bold">
+              {tab === "signin" ? "Welcome back" : "Create your account"}
+            </h1>
             <p className="text-sm text-[var(--muted)] mt-1">
-              Access your trading dashboard
+              {tab === "signin"
+                ? "Sign in to access your trading dashboard."
+                : "Join TradeAI and start paper trading today."}
             </p>
           </div>
 
-          {/* Form (wrapped in Suspense for useSearchParams) */}
-          <Suspense fallback={<div className="h-40 animate-pulse bg-[var(--surface)] rounded-xl" />}>
-            <SignInForm />
-          </Suspense>
+          {/* Form */}
+          {tab === "signin"
+            ? <SignInForm callbackUrl={callbackUrl} />
+            : <RegisterForm callbackUrl={callbackUrl} />
+          }
+
+          {/* Footer link */}
+          <p className="text-center text-xs text-[var(--muted)] mt-5">
+            {tab === "signin" ? (
+              <>Don&rsquo;t have an account?{" "}
+                <button onClick={() => setTab("register")}
+                  className="text-[var(--accent)] font-medium hover:underline">
+                  Create one free
+                </button>
+              </>
+            ) : (
+              <>Already have an account?{" "}
+                <button onClick={() => setTab("signin")}
+                  className="text-[var(--accent)] font-medium hover:underline">
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Page export ───────────────────────────────────────────────────────────
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <AuthPageInner />
+    </Suspense>
   );
 }
