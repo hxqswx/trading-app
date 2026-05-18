@@ -12,20 +12,21 @@ interface TradePanelProps { symbol: string }
 type OType = "market" | "limit" | "stop" | "stop_limit";
 
 export function TradePanel({ symbol }: TradePanelProps) {
-  const { quotes, tradeMode, setTradeMode } = useTradingStore();
+  const { quotes, tradeMode, setTradeMode, addNotification, settings } = useTradingStore();
   const t     = useT();
   const quote = quotes[symbol];
   const meta  = ASSET_META[symbol];
   const sym   = currencySymbol(meta?.currency ?? "USD");
 
   const [side,       setSide]       = useState<"buy" | "sell">("buy");
-  const [orderType,  setOrderType]  = useState<OType>("market");
+  const [orderType,  setOrderType]  = useState<OType>(settings.defaultOrderType as OType);
   const [qty,        setQty]        = useState("");
   const [limitPrice, setLimitPrice] = useState("");
   const [stopPrice,  setStopPrice]  = useState("");
   const [status,     setStatus]     = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message,    setMessage]    = useState("");
   const [showTypes,  setShowTypes]  = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const isSimple  = tradeMode === "simple";
   const price     = quote?.price ?? 0;
@@ -41,13 +42,14 @@ export function TradePanel({ symbol }: TradePanelProps) {
     { value: "stop_limit", label: t.trade.stopLimit, desc: t.trade.stopLimitDesc },
   ] as const;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function placeOrder() {
     setStatus("loading");
     setMessage("");
+    setShowConfirm(false);
+    const effectiveType = isSimple ? "market" : orderType;
     const order: TradeOrder = {
       symbol, side,
-      type:       isSimple ? "market" : orderType,
+      type:       effectiveType,
       qty:        parseFloat(qty),
       limitPrice: limitPrice ? parseFloat(limitPrice) : undefined,
       stopPrice:  stopPrice  ? parseFloat(stopPrice)  : undefined,
@@ -55,13 +57,32 @@ export function TradePanel({ symbol }: TradePanelProps) {
     try {
       const res  = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(order) });
       const data = await res.json();
-      if (!res.ok) { setStatus("error"); setMessage(data.error ?? "Order failed"); }
-      else {
+      if (!res.ok) {
+        setStatus("error");
+        setMessage(data.error ?? "Order failed");
+      } else {
         setStatus("success");
-        setMessage(`✓ ${side === "buy" ? t.trade.bought : t.trade.sold} ${qty} ${ticker} ${t.trade.at} ${t.trade.market.toLowerCase()}`);
+        const filledPrice = execPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        setMessage(`✓ ${side === "buy" ? t.trade.bought : t.trade.sold} ${qty} ${ticker} @ ${filledPrice}`);
+        addNotification({
+          type:    "order",
+          title:   `${side === "buy" ? t.trade.bought : t.trade.sold} ${qty} ${ticker}`,
+          body:    `${effectiveType.charAt(0).toUpperCase() + effectiveType.slice(1)} order filled @ ${sym}${filledPrice}`,
+          symbol,
+        });
         setQty("");
+        setTimeout(() => setStatus("idle"), 3000);
       }
     } catch (err) { setStatus("error"); setMessage(String(err)); }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (settings.confirmOrders && status !== "loading") {
+      setShowConfirm(true);
+      return;
+    }
+    await placeOrder();
   }
 
   return (
@@ -200,7 +221,24 @@ export function TradePanel({ symbol }: TradePanelProps) {
           }`}>{message}</div>
         )}
 
-        <button type="submit" disabled={status === "loading" || !qty}
+        {/* Confirmation prompt (when confirmOrders=true) */}
+        {showConfirm && (
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs space-y-2">
+            <p className="font-medium text-[var(--foreground)]">
+              Confirm: {side === "buy" ? t.trade.buy : t.trade.sell} {qty} {ticker} @ {sym}{execPrice.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:4})}
+            </p>
+            <div className="flex gap-2">
+              <button type="button" onClick={placeOrder}
+                className={`flex-1 py-2 rounded-lg text-white font-semibold ${side === "buy" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
+              >Confirm</button>
+              <button type="button" onClick={() => setShowConfirm(false)}
+                className="flex-1 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)]"
+              >Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <button type="submit" disabled={status === "loading" || !qty || showConfirm}
           className={`w-full py-3 rounded-xl text-sm font-bold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
             side === "buy" ? "bg-[var(--green)] hover:brightness-110 text-white" : "bg-[var(--red)] hover:brightness-110 text-white"
           }`}

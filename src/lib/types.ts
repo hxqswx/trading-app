@@ -84,6 +84,28 @@ export interface TradeOrder {
   stopPrice?: number;
 }
 
+// ── Notifications ──────────────────────────────────────────────────────────
+export type NotificationType = "order" | "strategy" | "system";
+
+export interface AppNotification {
+  id:        string;
+  type:      NotificationType;
+  title:     string;
+  body:      string;
+  symbol?:   string;
+  timestamp: number;
+  read:      boolean;
+}
+
+// ── User Settings ──────────────────────────────────────────────────────────
+export type PnlDisplay = "absolute" | "percent";
+
+export interface UserSettings {
+  defaultOrderType: "market" | "limit" | "stop" | "stop_limit";
+  confirmOrders:    boolean;
+  pnlDisplay:       PnlDisplay;
+}
+
 // ── Strategies ─────────────────────────────────────────────────────────────
 export type Signal = "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL";
 

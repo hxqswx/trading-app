@@ -71,6 +71,28 @@ export interface Translations {
   auth: {
     signIn: string; signOut: string; profile: string; demoHint: string;
   };
+  notifications: {
+    title: string; markAllRead: string;
+    empty: string; emptySub: string; clearAll: string;
+  };
+  settings: {
+    title: string;
+    sectionAppearance: string; sectionTrading: string;
+    sectionAccount: string; sectionAbout: string;
+    // Appearance
+    language: string; theme: string; themeHint: string; dark: string;
+    // Trading
+    defaultOrderType: string; defaultOrderTypeHint: string;
+    confirmOrders: string; confirmOrdersHint: string;
+    pnlDisplay: string;
+    // Account
+    paperBalance: string; paperNote: string;
+    resetBalance: string; resetting: string;
+    resetSuccess: string; resetSuccessBody: string; resetWarning: string;
+    // About
+    aboutMarket: string; aboutDB: string; aboutCache: string; aboutAuth: string;
+    viewOnGithub: string;
+  };
   loading: string;
   error: string;
 }
@@ -135,6 +157,34 @@ const en: Translations = {
     signIn: "Sign In", signOut: "Sign Out", profile: "Profile",
     demoHint: "Demo · any email · password: demo123",
   },
+  notifications: {
+    title: "Notifications",
+    markAllRead: "Mark all read",
+    empty: "No notifications yet",
+    emptySub: "Order fills, strategy signals, and system alerts will appear here.",
+    clearAll: "Clear all",
+  },
+  settings: {
+    title: "Settings",
+    sectionAppearance: "Appearance", sectionTrading: "Trading",
+    sectionAccount: "Account", sectionAbout: "About",
+    language: "Language", theme: "Theme", themeHint: "More themes coming soon", dark: "Dark",
+    defaultOrderType: "Default Order Type",
+    defaultOrderTypeHint: "Pre-selects the order type when you open a trade panel",
+    confirmOrders: "Confirm Orders",
+    confirmOrdersHint: "Show a confirmation dialog before placing each order",
+    pnlDisplay: "P&L Display",
+    paperBalance: "Paper Balance",
+    paperNote: "Simulated funds — no real money involved",
+    resetBalance: "Reset Paper Account",
+    resetting: "Resetting…",
+    resetSuccess: "Account Reset",
+    resetSuccessBody: "Your paper account has been reset to $25,000.",
+    resetWarning: "This will erase all positions and order history.",
+    aboutMarket: "Market Data", aboutDB: "Database",
+    aboutCache: "Cache", aboutAuth: "Authentication",
+    viewOnGithub: "View on GitHub",
+  },
   loading: "Loading…",
   error: "Something went wrong",
 };
@@ -198,6 +248,34 @@ const zh: Translations = {
   auth: {
     signIn: "登录", signOut: "退出登录", profile: "个人资料",
     demoHint: "演示账号 · 任意邮箱 · 密码：demo123",
+  },
+  notifications: {
+    title: "通知",
+    markAllRead: "全部已读",
+    empty: "暂无通知",
+    emptySub: "订单成交、策略信号和系统消息将在此显示。",
+    clearAll: "清除全部",
+  },
+  settings: {
+    title: "设置",
+    sectionAppearance: "外观", sectionTrading: "交易",
+    sectionAccount: "账户", sectionAbout: "关于",
+    language: "语言", theme: "主题", themeHint: "更多主题即将推出", dark: "暗色",
+    defaultOrderType: "默认订单类型",
+    defaultOrderTypeHint: "打开交易面板时预选订单类型",
+    confirmOrders: "订单确认",
+    confirmOrdersHint: "下单前显示确认对话框",
+    pnlDisplay: "盈亏显示方式",
+    paperBalance: "模拟账户余额",
+    paperNote: "模拟资金 — 不涉及真实资金",
+    resetBalance: "重置模拟账户",
+    resetting: "重置中…",
+    resetSuccess: "账户已重置",
+    resetSuccessBody: "模拟账户已重置至 $25,000。",
+    resetWarning: "此操作将清除所有持仓和订单记录。",
+    aboutMarket: "市场数据", aboutDB: "数据库",
+    aboutCache: "缓存", aboutAuth: "身份验证",
+    viewOnGithub: "在 GitHub 查看",
   },
   loading: "加载中…",
   error: "发生错误",

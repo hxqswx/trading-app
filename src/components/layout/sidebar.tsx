@@ -9,8 +9,9 @@ import { useT } from "@/lib/hooks/use-t";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { lang, setLang } = useTradingStore();
+  const { lang, setLang, notifications, openNotifications, openSettings } = useTradingStore();
   const t = useT();
+  const unread = notifications.filter((n) => !n.read).length;
 
   const nav = [
     { href: "/",            icon: LayoutDashboard, label: t.nav.dashboard   },
@@ -57,10 +58,23 @@ export function Sidebar() {
         >
           {lang === "en" ? "中" : "EN"}
         </button>
-        <button title={t.nav.notifications} className="w-10 h-10 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]">
+        <button
+          onClick={openNotifications}
+          title={t.nav.notifications}
+          className="relative w-10 h-10 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+        >
           <Bell size={16} />
+          {unread > 0 && (
+            <span className="absolute top-1 right-1 min-w-[14px] h-3.5 px-0.5 bg-[var(--accent)] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
         </button>
-        <button title={t.nav.settings} className="w-10 h-10 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]">
+        <button
+          onClick={openSettings}
+          title={t.nav.settings}
+          className="w-10 h-10 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+        >
           <Settings size={16} />
         </button>
       </div>
