@@ -1,22 +1,31 @@
 "use client";
 
 /**
- * /sign-in — Unified auth page.
+ * /sign-in  ·  Landing + Auth page.
  *
- * Modern design: animated gradient background, glassmorphism card,
- * Sign In / Create Account tabs, password strength meter.
+ * Layout:
+ *   Desktop (lg+) — left 55% hero  |  right 45% auth card
+ *   Mobile        — hero at top    →  auth card below
+ *
+ * Visual elements:
+ *   • Animated background: dark navy + 50px dot-grid + 3 drifting glow orbs
+ *   • Logo mark with pulse rings and gradient glow shadow
+ *   • Self-drawing SVG price-chart with gradient area fill
+ *   • Floating stat cards & feature badges
+ *   • Glassmorphism auth card with Sign In / Register tabs
  */
-import { useState, useTransition, Suspense } from "react";
+import { useState, useTransition, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Eye, EyeOff, Mail, Lock, User, ArrowRight,
-  CheckCircle2, TrendingUp, Zap, Shield, BarChart2,
-  Activity,
+  Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2,
+  TrendingUp, Zap, Shield, Activity, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ── Inline SVG brand icons ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════ VISUAL ATOMS ══
+
+/** Google OAuth icon */
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" aria-hidden>
@@ -27,6 +36,8 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+/** GitHub OAuth icon */
 function GitHubIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current shrink-0" aria-hidden>
@@ -35,461 +46,515 @@ function GitHubIcon() {
   );
 }
 
-// ── Password strength ─────────────────────────────────────────────────────
-function PasswordStrength({ password }: { password: string }) {
-  if (!password) return null;
-  const len   = password.length;
-  const score = len < 6 ? 1 : len < 10 ? 2 : /[A-Z]/.test(password) && /[0-9]/.test(password) ? 4 : 3;
-  const labels = ["", "Weak", "Fair", "Good", "Strong"];
-  const colors = ["", "#f85149", "#d29922", "#58a6ff", "#3fb950"];
+// ═══════════════════════════════════════════════════════════ HERO PIECES ══
+
+/** Animated logo mark with pulsing glow rings */
+function LogoMark({ size = "lg" }: { size?: "sm" | "lg" }) {
+  const dim = size === "lg" ? "w-16 h-16" : "w-10 h-10";
+  const ico = size === "lg" ? 30 : 18;
+  return (
+    <div className="relative flex items-center justify-center shrink-0">
+      {/* Outer pulse ring */}
+      <div className={cn(
+        "absolute rounded-2xl border border-[#58a6ff]/30",
+        size === "lg" ? "w-20 h-20 animate-logo-pulse" : "w-14 h-14 animate-logo-pulse-sm"
+      )} />
+      {/* Inner pulse ring */}
+      <div className={cn(
+        "absolute rounded-2xl border border-[#58a6ff]/15",
+        size === "lg" ? "w-24 h-24 animate-logo-pulse-delay" : "w-16 h-16"
+      )} />
+      {/* Icon container */}
+      <div className={cn(
+        dim,
+        "relative rounded-2xl flex items-center justify-center z-10",
+        "bg-gradient-to-br from-[#58a6ff] via-[#3b82f6] to-[#6366f1]",
+        "shadow-[0_0_30px_rgba(88,166,255,0.5),0_0_60px_rgba(88,166,255,0.2)]"
+      )}>
+        <TrendingUp size={ico} className="text-white" strokeWidth={2.5} />
+      </div>
+    </div>
+  );
+}
+
+/** Self-drawing rising SVG chart with gradient fill */
+function AnimatedChart() {
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setDrawn(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  // A rising line with a realistic jagged path
+  const line = "M0,72 L18,62 L36,67 L54,52 L72,57 L90,40 L108,45 L126,28 L144,33 L162,18 L180,22 L198,12 L216,16 L234,6 L252,9 L270,4";
+  const area = `${line} L270,90 L0,90 Z`;
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-white/6 bg-white/3 p-4">
+      {/* Top row: fake ticker */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-white">BTC / USD</span>
+          <span className="text-[10px] text-white/40 bg-white/6 px-2 py-0.5 rounded-full">1D</span>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold font-mono text-white">$67,840</p>
+          <p className="text-[10px] font-mono text-[#3fb950]">▲ +4.23%</p>
+        </div>
+      </div>
+
+      {/* Chart SVG */}
+      <svg viewBox="0 0 270 90" className="w-full h-20" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#58a6ff" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#58a6ff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Area fill */}
+        <path d={area} fill="url(#areaFill)" />
+        {/* Line — draws itself via dashoffset transition */}
+        <path
+          d={line} fill="none" stroke="#58a6ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          style={{
+            strokeDasharray: 800,
+            strokeDashoffset: drawn ? 0 : 800,
+            transition: drawn ? "stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)" : "none",
+          }}
+        />
+        {/* End dot */}
+        {drawn && <circle cx="270" cy="4" r="4" fill="#58a6ff" className="drop-shadow-[0_0_6px_#58a6ff]" />}
+      </svg>
+    </div>
+  );
+}
+
+/** Animated counting number */
+function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let start: number | null = null;
+    const duration = 1200;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      setVal(Math.floor(progress * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    const id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }, [target]);
+  return <>{val}{suffix}</>;
+}
+
+/** Stat card */
+function StatCard({ value, suffix = "", label, icon: Icon, color }: {
+  value: number; suffix?: string; label: string;
+  icon: React.ElementType; color: string;
+}) {
+  return (
+    <div className="flex-1 min-w-0 rounded-xl border border-white/8 bg-white/4 p-3 text-center backdrop-blur-sm">
+      <div className="flex items-center justify-center mb-1">
+        <Icon size={12} style={{ color }} />
+      </div>
+      <p className="text-xl font-black font-mono" style={{ color }}>
+        <CountUp target={value} suffix={suffix} />
+      </p>
+      <p className="text-[10px] text-white/40 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+/** Feature badge pill */
+function Badge({ icon: Icon, label, color }: { icon: React.ElementType; label: string; color: string }) {
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
+      style={{ borderColor: `${color}30`, backgroundColor: `${color}10`, color }}>
+      <Icon size={11} />
+      {label}
+    </div>
+  );
+}
+
+/** Drifting background orbs + grid */
+function Background() {
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-[#050a13]">
+      {/* Dot grid */}
+      <div className="absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }} />
+      {/* Radial vignette */}
+      <div className="absolute inset-0 bg-radial-[ellipse_at_center] from-transparent via-[#050a13]/60 to-[#050a13]" />
+      {/* Orbs */}
+      <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[140px] animate-orb-a"
+        style={{ background: "radial-gradient(circle, rgba(88,166,255,0.12) 0%, transparent 70%)" }} />
+      <div className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full blur-[120px] animate-orb-b"
+        style={{ background: "radial-gradient(circle, rgba(139,92,246,0.10) 0%, transparent 70%)" }} />
+      <div className="absolute -bottom-32 left-1/4 w-[500px] h-[500px] rounded-full blur-[100px] animate-orb-c"
+        style={{ background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)" }} />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════ FORM ATOMS ══
+
+function PasswordStrength({ pw }: { pw: string }) {
+  if (!pw) return null;
+  const s = pw.length < 6 ? 1 : pw.length < 10 ? 2 : /[A-Z]/.test(pw) && /\d/.test(pw) ? 4 : 3;
+  const cols = ["", "#f85149", "#d29922", "#58a6ff", "#3fb950"];
+  const labs = ["", "Weak", "Fair", "Good", "Strong"];
   return (
     <div className="space-y-1 pt-0.5">
       <div className="flex gap-1">
         {[1,2,3,4].map((i) => (
           <div key={i} className="flex-1 h-0.5 rounded-full transition-all duration-300"
-            style={{ background: i <= score ? colors[score] : "rgba(255,255,255,0.08)" }} />
+            style={{ background: i <= s ? cols[s] : "rgba(255,255,255,0.08)" }} />
         ))}
       </div>
-      <p className="text-[10px] font-medium transition-colors" style={{ color: colors[score] }}>
-        {labels[score]}
-      </p>
+      <p className="text-[10px]" style={{ color: cols[s] }}>{labs[s]}</p>
     </div>
   );
 }
 
-// ── Reusable input field ──────────────────────────────────────────────────
-function InputField({
-  label, type = "text", value, onChange, placeholder,
-  icon: Icon, autoComplete, rightEl,
-}: {
-  label: string; type?: string; value: string;
-  onChange: (v: string) => void; placeholder?: string;
-  icon: React.ElementType; autoComplete?: string;
-  rightEl?: React.ReactNode;
+function Field({ label, type = "text", value, onChange, placeholder, icon: Icon, autoComplete, rightEl }: {
+  label: string; type?: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; icon: React.ElementType; autoComplete?: string; rightEl?: React.ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wide">
-        {label}
-      </label>
+      <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest">{label}</label>
       <div className="relative group">
-        <Icon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--accent)] transition-colors pointer-events-none" />
-        <input
-          type={type} value={value} autoComplete={autoComplete}
-          placeholder={placeholder} required
+        <Icon size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 group-focus-within:text-[#58a6ff] transition-colors pointer-events-none" />
+        <input type={type} value={value} required autoComplete={autoComplete} placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full h-11 pl-10 pr-10 rounded-xl border border-white/10 bg-white/5 text-sm text-[var(--foreground)] placeholder:text-white/20 focus:outline-none focus:border-[var(--accent)] focus:bg-white/8 transition-all"
-        />
+          className="w-full h-11 pl-10 pr-10 rounded-xl border border-white/8 bg-white/5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#58a6ff]/60 focus:bg-white/8 transition-all" />
         {rightEl}
       </div>
     </div>
   );
 }
 
-// ── Password field ────────────────────────────────────────────────────────
-function PasswordInput({
-  label, value, onChange, autoComplete, placeholder,
-}: {
-  label: string; value: string; onChange: (v: string) => void;
-  autoComplete?: string; placeholder?: string;
+function PwField({ label, value, onChange, autoComplete, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; autoComplete?: string; placeholder?: string;
 }) {
   const [show, setShow] = useState(false);
   return (
-    <InputField
-      label={label} type={show ? "text" : "password"} value={value}
-      onChange={onChange} icon={Lock} autoComplete={autoComplete}
-      placeholder={placeholder}
+    <Field label={label} type={show ? "text" : "password"} value={value} onChange={onChange}
+      icon={Lock} autoComplete={autoComplete} placeholder={placeholder}
       rightEl={
-        <button type="button" tabIndex={-1}
-          onClick={() => setShow(!show)}
-          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-          {show ? <EyeOff size={14} /> : <Eye size={14} />}
+        <button type="button" tabIndex={-1} onClick={() => setShow(!show)}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/70 transition-colors">
+          {show ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
-      }
-    />
+      } />
   );
 }
 
-// ── Error box ─────────────────────────────────────────────────────────────
-function ErrorBox({ msg }: { msg: string }) {
+function Err({ msg }: { msg: string }) {
   return (
-    <div className="flex items-start gap-2 text-xs text-[var(--red)] bg-[rgba(248,81,73,0.1)] border border-[rgba(248,81,73,0.25)] rounded-xl px-3.5 py-3">
-      <span className="shrink-0 mt-0.5">⚠</span>
-      <span>{msg}</span>
+    <div className="flex items-start gap-2 text-xs text-[#f85149] bg-[rgba(248,81,73,0.08)] border border-[rgba(248,81,73,0.2)] rounded-xl px-3.5 py-3">
+      <span className="shrink-0">⚠</span><span>{msg}</span>
     </div>
   );
 }
 
-// ── Sign-In form ──────────────────────────────────────────────────────────
+function Spinner() {
+  return <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />;
+}
+
+// ═══════════════════════════════════════════════════════════ AUTH FORMS ══
+
 function SignInForm({ callbackUrl }: { callbackUrl: string }) {
-  const [email,     setEmail]    = useState("");
-  const [password,  setPassword] = useState("");
-  const [error,     setError]    = useState<string | null>(null);
-  const [isPending, start]       = useTransition();
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError]       = useState<string | null>(null);
+  const [pending, go]           = useTransition();
 
-  const hasGitHub = process.env.NEXT_PUBLIC_HAS_GITHUB === "true";
-  const hasGoogle = process.env.NEXT_PUBLIC_HAS_GOOGLE === "true";
-  const hasOAuth  = hasGitHub || hasGoogle;
+  const hasGH  = process.env.NEXT_PUBLIC_HAS_GITHUB === "true";
+  const hasGOO = process.env.NEXT_PUBLIC_HAS_GOOGLE === "true";
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    start(async () => {
-      const res = await signIn("credentials", { email, password, redirect: false });
-      if (res?.error) {
-        setError("Incorrect email or password. Demo: any email + password demo123");
-      } else {
-        window.location.href = callbackUrl;
-      }
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setError(null);
+    go(async () => {
+      const r = await signIn("credentials", { email, password, redirect: false });
+      if (r?.error) setError("Incorrect email or password. Demo: any email + demo123");
+      else window.location.href = callbackUrl;
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {hasOAuth && (
+    <form onSubmit={submit} className="space-y-4">
+      {(hasGH || hasGOO) && (
         <>
-          <div className={cn("grid gap-2", hasGitHub && hasGoogle ? "grid-cols-2" : "grid-cols-1")}>
-            {hasGitHub && (
-              <button type="button" disabled={isPending}
-                onClick={() => start(async () => { await signIn("github", { callbackUrl }); })}
-                className="flex items-center justify-center gap-2 h-11 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm font-medium transition-all disabled:opacity-50">
-                <GitHubIcon /> GitHub
-              </button>
-            )}
-            {hasGoogle && (
-              <button type="button" disabled={isPending}
-                onClick={() => start(async () => { await signIn("google", { callbackUrl }); })}
-                className="flex items-center justify-center gap-2 h-11 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm font-medium transition-all disabled:opacity-50">
-                <GoogleIcon /> Google
-              </button>
-            )}
+          <div className={cn("grid gap-2", hasGH && hasGOO ? "grid-cols-2" : "grid-cols-1")}>
+            {hasGH  && <OAuthBtn icon={<GitHubIcon />} label="GitHub" onClick={() => go(async () => signIn("github",  { callbackUrl }))} disabled={pending} />}
+            {hasGOO && <OAuthBtn icon={<GoogleIcon />} label="Google" onClick={() => go(async () => signIn("google",  { callbackUrl }))} disabled={pending} />}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/8" />
-            <span className="text-[11px] text-[var(--muted)]">or continue with email</span>
-            <div className="flex-1 h-px bg-white/8" />
-          </div>
+          <Divider text="or continue with email" />
         </>
       )}
-
-      <InputField label="Email" type="email" value={email} onChange={setEmail}
-        placeholder="you@example.com" icon={Mail} autoComplete="email" />
-
-      <PasswordInput label="Password" value={password} onChange={setPassword}
-        autoComplete="current-password" />
-
-      {error && <ErrorBox msg={error} />}
-
-      <button type="submit" disabled={isPending}
-        className={cn(
-          "w-full h-11 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2",
-          "bg-[var(--accent)] text-white hover:brightness-110 active:scale-[0.98]",
-          "disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[var(--accent)]/20"
-        )}>
-        {isPending
-          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in…</>
-          : <><span>Sign in</span><ArrowRight size={14} /></>
-        }
-      </button>
-
+      <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon={Mail} autoComplete="email" />
+      <PwField label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
+      {error && <Err msg={error} />}
+      <SubmitBtn pending={pending} label="Sign in" />
       {/* Demo hint */}
-      <div className="rounded-xl border border-white/8 bg-white/4 px-4 py-3 text-[11px] text-[var(--muted)] text-center space-y-1">
-        <p className="font-medium text-[var(--foreground)/70]">Demo account</p>
-        <p>Any email address · Password:{" "}
-          <button type="button" className="font-mono text-[var(--accent)] hover:underline"
-            onClick={() => { setEmail("demo@tradeai.app"); setPassword("demo123"); }}>
-            demo123
-          </button>
-        </p>
+      <div className="rounded-xl border border-white/6 bg-white/3 px-4 py-3 text-[11px] text-center text-white/40">
+        <span className="font-medium text-white/60">Demo account</span> — any email ·{" "}
+        <button type="button" className="text-[#58a6ff] hover:underline font-mono"
+          onClick={() => { setEmail("demo@tradeai.app"); setPassword("demo123"); }}>
+          fill demo credentials
+        </button>
       </div>
     </form>
   );
 }
 
-// ── Register form ─────────────────────────────────────────────────────────
 function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
   const router = useRouter();
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm,  setConfirm]  = useState("");
-  const [error,    setError]    = useState<string | null>(null);
-  const [done,     setDone]     = useState(false);
-  const [isPending, start]      = useTransition();
+  const [name, setName]         = useState("");
+  const [email, setEmail]       = useState("");
+  const [pw, setPw]             = useState("");
+  const [pw2, setPw2]           = useState("");
+  const [error, setError]       = useState<string | null>(null);
+  const [done, setDone]         = useState(false);
+  const [pending, go]           = useTransition();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (password !== confirm) { setError("Passwords do not match."); return; }
-    if (password.length < 6)  { setError("Password must be at least 6 characters."); return; }
-
-    start(async () => {
-      const res  = await fetch("/api/auth/register", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setError(null);
+    if (pw !== pw2)  { setError("Passwords do not match."); return; }
+    if (pw.length < 6) { setError("Password must be at least 6 characters."); return; }
+    go(async () => {
+      const res  = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, password: pw }) });
       const data = await res.json();
       if (!res.ok || !data.ok) { setError(data.error ?? "Registration failed."); return; }
-
-      const si = await signIn("credentials", { email, password, redirect: false });
-      if (si?.error) {
-        router.push(`/sign-in?registered=1&email=${encodeURIComponent(email)}`);
-        return;
-      }
+      const si = await signIn("credentials", { email, password: pw, redirect: false });
+      if (si?.error) { router.push(`/sign-in?registered=1&email=${encodeURIComponent(email)}`); return; }
       setDone(true);
       setTimeout(() => { window.location.href = callbackUrl; }, 1200);
     });
   }
 
-  if (done) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-10 text-center">
-        <div className="w-14 h-14 rounded-full bg-[rgba(63,185,80,0.15)] border border-[rgba(63,185,80,0.3)] flex items-center justify-center">
-          <CheckCircle2 size={28} className="text-[var(--green)]" />
-        </div>
-        <div>
-          <p className="font-semibold text-base">Account created!</p>
-          <p className="text-sm text-[var(--muted)] mt-1">Redirecting to your dashboard…</p>
-        </div>
+  if (done) return (
+    <div className="flex flex-col items-center gap-4 py-10 text-center">
+      <div className="w-14 h-14 rounded-full bg-[rgba(63,185,80,0.12)] border border-[rgba(63,185,80,0.25)] flex items-center justify-center">
+        <CheckCircle2 size={28} className="text-[#3fb950]" />
       </div>
-    );
-  }
+      <div><p className="font-semibold text-base">Account created!</p><p className="text-xs text-white/40 mt-1">Redirecting to your dashboard…</p></div>
+    </div>
+  );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <InputField label="Full name" value={name} onChange={setName}
-        placeholder="Alex Smith" icon={User} autoComplete="name" />
-      <InputField label="Email" type="email" value={email} onChange={setEmail}
-        placeholder="you@example.com" icon={Mail} autoComplete="email" />
+    <form onSubmit={submit} className="space-y-4">
+      <Field label="Full name" value={name} onChange={setName} placeholder="Alex Smith" icon={User} autoComplete="name" />
+      <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon={Mail} autoComplete="email" />
       <div className="space-y-1">
-        <PasswordInput label="Password" value={password} onChange={setPassword}
-          autoComplete="new-password" placeholder="At least 6 characters" />
-        <PasswordStrength password={password} />
+        <PwField label="Password" value={pw} onChange={setPw} autoComplete="new-password" placeholder="At least 6 characters" />
+        <PasswordStrength pw={pw} />
       </div>
-      <PasswordInput label="Confirm password" value={confirm} onChange={setConfirm}
-        autoComplete="new-password" placeholder="Repeat your password" />
-      {error && <ErrorBox msg={error} />}
-      <button type="submit" disabled={isPending}
-        className={cn(
-          "w-full h-11 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2",
-          "bg-[var(--accent)] text-white hover:brightness-110 active:scale-[0.98]",
-          "disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[var(--accent)]/20"
-        )}>
-        {isPending
-          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creating account…</>
-          : <><span>Create account</span><ArrowRight size={14} /></>
-        }
-      </button>
-      <p className="text-center text-[10px] text-[var(--muted)]">
-        Paper trading only · no real funds at risk
-      </p>
+      <PwField label="Confirm password" value={pw2} onChange={setPw2} autoComplete="new-password" placeholder="Repeat your password" />
+      {error && <Err msg={error} />}
+      <SubmitBtn pending={pending} label="Create account" />
+      <p className="text-center text-[10px] text-white/30">Paper trading only · no real funds at risk</p>
     </form>
   );
 }
 
-// ── Animated background orbs ──────────────────────────────────────────────
-function Background() {
+// ── Shared small components ────────────────────────────────────────────────
+function OAuthBtn({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled: boolean }) {
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Base */}
-      <div className="absolute inset-0 bg-[#060a10]" />
-      {/* Grid */}
-      <div className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: "linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }} />
-      {/* Glowing orbs */}
-      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-[var(--accent)] opacity-[0.07] blur-[120px] animate-orb-1" />
-      <div className="absolute top-1/2 -right-60 w-[500px] h-[500px] rounded-full bg-purple-500 opacity-[0.05] blur-[100px] animate-orb-2" />
-      <div className="absolute -bottom-40 left-1/3 w-[400px] h-[400px] rounded-full bg-[var(--green)] opacity-[0.04] blur-[100px] animate-orb-3" />
+    <button type="button" onClick={onClick} disabled={disabled}
+      className="flex items-center justify-center gap-2 h-11 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm font-medium transition-all disabled:opacity-50">
+      {icon} {label}
+    </button>
+  );
+}
+function Divider({ text }: { text: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-px bg-white/8" /><span className="text-[10px] text-white/30">{text}</span><div className="flex-1 h-px bg-white/8" />
     </div>
   );
 }
-
-// ── Stat pill ─────────────────────────────────────────────────────────────
-function Stat({ value, label }: { value: string; label: string }) {
+function SubmitBtn({ pending, label }: { pending: boolean; label: string }) {
   return (
-    <div className="flex-1 text-center py-3 px-2 rounded-xl bg-white/5 border border-white/8">
-      <p className="text-base font-bold text-[var(--accent)]">{value}</p>
-      <p className="text-[10px] text-[var(--muted)] mt-0.5">{label}</p>
-    </div>
+    <button type="submit" disabled={pending}
+      className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#58a6ff] text-white hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#58a6ff]/25">
+      {pending ? <><Spinner />{label.replace("Sign", "Signing").replace("Create", "Creating")}…</> : <>{label} <ArrowRight size={14} /></>}
+    </button>
   );
 }
 
-// ── Inner (needs useSearchParams → wrapped in Suspense) ───────────────────
+// ═══════════════════════════════════════════════════════════ MAIN PAGE ══
+
+const PAGE_STYLES = `
+  @keyframes orbA { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(80px,50px) scale(1.15)} }
+  @keyframes orbB { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-60px,80px) scale(0.88)} }
+  @keyframes orbC { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,-60px) scale(1.08)} }
+  @keyframes logoPulse { 0%,100%{opacity:0.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.06)} }
+  @keyframes logoPulseSm{ 0%,100%{opacity:0.3;transform:scale(1)} 50%{opacity:0.8;transform:scale(1.04)} }
+  @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .animate-orb-a { animation: orbA 14s ease-in-out infinite; }
+  .animate-orb-b { animation: orbB 18s ease-in-out infinite; }
+  .animate-orb-c { animation: orbC 22s ease-in-out infinite; }
+  .animate-logo-pulse { animation: logoPulse 2.4s ease-in-out infinite; }
+  .animate-logo-pulse-delay { animation: logoPulseSm 2.4s ease-in-out infinite 0.8s; }
+  .animate-float { animation: floatUp 4s ease-in-out infinite; }
+  .animate-float-late { animation: floatUp 4s ease-in-out infinite 1.3s; }
+`;
+
 function AuthInner() {
   const params      = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/";
   const registered  = params.get("registered") === "1";
   const initTab     = params.get("tab") === "register" ? "register" : "signin";
-
   const [tab, setTab] = useState<"signin" | "register">(registered ? "signin" : initTab);
 
-  const FEATURES = [
-    { icon: TrendingUp, text: "Real-time prices across 21+ assets" },
-    { icon: BarChart2,  text: "6 institutional-grade strategies"    },
-    { icon: Zap,        text: "AI-powered market analysis"          },
-    { icon: Shield,     text: "100% paper trading — zero risk"      },
-  ];
-
   return (
-    <div className="relative min-h-screen flex">
+    <div className="relative min-h-screen flex flex-col lg:flex-row">
+      <style>{PAGE_STYLES}</style>
       <Background />
 
-      {/* ── Left panel (desktop) ───────────────────────────────────────── */}
-      <div className="hidden lg:flex flex-col justify-between w-[460px] shrink-0 p-12 border-r border-white/6">
-        {/* Logo */}
+      {/* ══════════════ LEFT — HERO ══════════════ */}
+      <div className="flex flex-col justify-between lg:w-[58%] px-8 pt-10 pb-8 lg:px-14 lg:pt-14 lg:pb-12">
+
+        {/* Logo wordmark */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--accent)]/30">
-            <Activity size={18} className="text-white" />
-          </div>
-          <span className="font-bold text-xl tracking-tight text-white">TradeAI</span>
-        </div>
-
-        {/* Headline */}
-        <div className="space-y-8">
+          <LogoMark size="sm" />
           <div>
-            <h1 className="text-4xl font-bold leading-tight text-white">
-              Professional<br />
-              trading,{" "}
-              <span className="text-[var(--accent)]">reimagined.</span>
-            </h1>
-            <p className="mt-4 text-sm text-[var(--muted)] leading-relaxed max-w-xs">
-              Multi-asset paper trading with real-time market data,
-              AI analysis, and six institutional-grade strategies.
-            </p>
-          </div>
-
-          {/* Feature list */}
-          <ul className="space-y-3.5">
-            {FEATURES.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[rgba(88,166,255,0.1)] border border-[rgba(88,166,255,0.15)] flex items-center justify-center shrink-0">
-                  <Icon size={14} className="text-[var(--accent)]" />
-                </div>
-                <span className="text-sm text-white/70">{text}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Stats */}
-          <div className="flex gap-3">
-            <Stat value="21+" label="Assets" />
-            <Stat value="6"   label="Strategies" />
-            <Stat value="$25k" label="Paper funds" />
+            <span className="font-black text-xl tracking-tight text-white">TradeAI</span>
+            <span className="ml-2 text-[10px] font-bold text-[#58a6ff] bg-[rgba(88,166,255,0.12)] px-2 py-0.5 rounded-full border border-[rgba(88,166,255,0.2)]">BETA</span>
           </div>
         </div>
 
-        <p className="text-[11px] text-[var(--muted)]">
-          © {new Date().getFullYear()} TradeAI · Paper trading only
+        {/* ── Hero content (grows to fill) */}
+        <div className="flex-1 flex flex-col justify-center py-12 lg:py-0 max-w-xl">
+
+          {/* Badges */}
+          <div className="flex flex-wrap gap-2 mb-8">
+            <Badge icon={Activity} label="Real-time Data"   color="#3fb950" />
+            <Badge icon={Zap}      label="AI Analysis"      color="#58a6ff" />
+            <Badge icon={Shield}   label="Paper Trading"    color="#a855f7" />
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight text-white mb-5">
+            Trade the<br />
+            markets like<br />
+            <span style={{
+              background: "linear-gradient(135deg, #58a6ff 0%, #818cf8 40%, #a855f7 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
+              a professional.
+            </span>
+          </h1>
+
+          {/* Sub-text */}
+          <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-8 max-w-sm">
+            Real-time quotes across crypto, stocks, and global markets.
+            Six institutional-grade strategies. AI-powered signals.
+            All risk-free with paper trading.
+          </p>
+
+          {/* Animated chart card */}
+          <div className="animate-float">
+            <AnimatedChart />
+          </div>
+
+          {/* Stats row */}
+          <div className="flex gap-3 mt-5 animate-float-late">
+            <StatCard value={21} suffix="+"  label="Assets"     icon={Activity}   color="#58a6ff" />
+            <StatCard value={6}              label="Strategies"  icon={TrendingUp}  color="#a855f7" />
+            <StatCard value={25} suffix="K+" label="Paper $USD"  icon={Zap}        color="#3fb950" />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-[11px] text-white/20 hidden lg:block">
+          © {new Date().getFullYear()} TradeAI · Paper trading only · No real funds at risk
         </p>
       </div>
 
-      {/* ── Right panel — form ─────────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-5 sm:p-8">
-        <div className="w-full max-w-[400px]">
+      {/* ══════════════ RIGHT — AUTH CARD ══════════════ */}
+      <div className="flex items-center justify-center px-5 pb-10 lg:pb-0 lg:px-10 lg:w-[42%]">
+        <div className="w-full max-w-[390px]">
 
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <div className="w-9 h-9 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--accent)]/30">
-              <Activity size={16} className="text-white" />
+          {/* Registered success banner */}
+          {registered && (
+            <div className="mb-4 flex items-center gap-2 text-sm text-[#3fb950] bg-[rgba(63,185,80,0.08)] border border-[rgba(63,185,80,0.2)] rounded-xl px-4 py-3">
+              <CheckCircle2 size={15} className="shrink-0" />
+              Account created — sign in to continue.
             </div>
-            <span className="font-bold text-lg tracking-tight text-white">TradeAI</span>
-          </div>
+          )}
 
-          {/* Card */}
-          <div className="rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl shadow-2xl p-7 space-y-6"
-            style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 32px 64px -16px rgba(0,0,0,0.6)" }}>
+          {/* Glass card */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-2xl p-7 space-y-6"
+            style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 40px 80px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
 
-            {/* Registered banner */}
-            {registered && (
-              <div className="flex items-center gap-2 text-sm text-[var(--green)] bg-[rgba(63,185,80,0.08)] border border-[rgba(63,185,80,0.2)] rounded-xl px-4 py-3">
-                <CheckCircle2 size={15} className="shrink-0" />
-                Account created — sign in to continue.
-              </div>
-            )}
+            {/* Card header */}
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {tab === "signin" ? "Welcome back" : "Create your account"}
+              </h2>
+              <p className="text-xs text-white/35 mt-1">
+                {tab === "signin"
+                  ? "Sign in to access your trading dashboard."
+                  : "Join TradeAI and start paper trading today."}
+              </p>
+            </div>
 
             {/* Tab switcher */}
-            <div className="flex rounded-xl border border-white/10 overflow-hidden bg-white/4 p-0.5 gap-0.5">
+            <div className="flex rounded-xl border border-white/8 bg-white/4 p-0.5 gap-0.5">
               {(["signin", "register"] as const).map((t) => (
                 <button key={t} onClick={() => setTab(t)}
                   className={cn(
                     "flex-1 py-2 text-sm font-semibold rounded-[9px] transition-all duration-200",
                     tab === t
-                      ? "bg-[var(--accent)] text-white shadow-md shadow-[var(--accent)]/25"
-                      : "text-[var(--muted)] hover:text-white"
+                      ? "bg-[#58a6ff] text-white shadow-md shadow-[#58a6ff]/30"
+                      : "text-white/35 hover:text-white/70"
                   )}>
                   {t === "signin" ? "Sign In" : "Register"}
                 </button>
               ))}
             </div>
 
-            {/* Heading */}
-            <div>
-              <h2 className="text-lg font-bold text-white">
-                {tab === "signin" ? "Welcome back" : "Create your account"}
-              </h2>
-              <p className="text-xs text-[var(--muted)] mt-1">
-                {tab === "signin"
-                  ? "Sign in to access your dashboard."
-                  : "Start paper trading in 30 seconds."}
-              </p>
-            </div>
-
             {/* Form */}
             {tab === "signin"
-              ? <SignInForm callbackUrl={callbackUrl} />
+              ? <SignInForm  callbackUrl={callbackUrl} />
               : <RegisterForm callbackUrl={callbackUrl} />
             }
 
             {/* Footer toggle */}
-            <p className="text-center text-xs text-[var(--muted)] pt-1">
-              {tab === "signin" ? (
-                <>No account yet?{" "}
-                  <button onClick={() => setTab("register")}
-                    className="text-[var(--accent)] font-semibold hover:underline">
-                    Create one free →
-                  </button>
-                </>
-              ) : (
-                <>Have an account?{" "}
-                  <button onClick={() => setTab("signin")}
-                    className="text-[var(--accent)] font-semibold hover:underline">
-                    Sign in →
-                  </button>
-                </>
-              )}
+            <p className="text-center text-[11px] text-white/30">
+              {tab === "signin"
+                ? <>No account?{" "}<button onClick={() => setTab("register")} className="text-[#58a6ff] font-semibold hover:underline inline-flex items-center gap-0.5">Create one free <ChevronRight size={10} /></button></>
+                : <>Have an account?{" "}<button onClick={() => setTab("signin")} className="text-[#58a6ff] font-semibold hover:underline inline-flex items-center gap-0.5">Sign in <ChevronRight size={10} /></button></>
+              }
             </p>
           </div>
+
+          {/* Trust line */}
+          <p className="text-center text-[10px] text-white/20 mt-4">
+            Secured with NextAuth · Zero real funds at risk
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-// ── Animations (injected once) ────────────────────────────────────────────
-const ORB_STYLES = `
-  @keyframes orb1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(60px,40px) scale(1.1)} }
-  @keyframes orb2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-40px,60px) scale(0.9)} }
-  @keyframes orb3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-50px) scale(1.05)} }
-  .animate-orb-1 { animation: orb1 12s ease-in-out infinite; }
-  .animate-orb-2 { animation: orb2 15s ease-in-out infinite; }
-  .animate-orb-3 { animation: orb3 18s ease-in-out infinite; }
-`;
-
-// ── Page export ────────────────────────────────────────────────────────────
 export default function AuthPage() {
   return (
-    <>
-      <style>{ORB_STYLES}</style>
-      <Suspense fallback={
-        <div className="min-h-screen bg-[#060a10] flex items-center justify-center">
-          <span className="w-8 h-8 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
-        </div>
-      }>
-        <AuthInner />
-      </Suspense>
-    </>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#050a13] flex items-center justify-center">
+        <span className="w-9 h-9 rounded-full border-2 border-[#58a6ff] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <AuthInner />
+    </Suspense>
   );
 }
