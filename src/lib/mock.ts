@@ -80,7 +80,14 @@ function normalRandom(r: () => number): number {
 
 export function generateQuote(symbol: string, priceOverride?: number): Quote {
   const meta = ASSET_META[symbol];
-  if (!meta) throw new Error(`Unknown symbol: ${symbol}`);
+  if (!meta) {
+    // Unknown / custom symbol — return a safe placeholder
+    return {
+      symbol, price: 100, open: 100, high: 102, low: 98,
+      volume: 1_000_000, change: 0, changePct: 0,
+      timestamp: Date.now(), type: "stock", currency: "USD",
+    };
+  }
   const r = lcg(symbolSeed(symbol) + Math.floor(Date.now() / 60_000));
 
   const price     = priceOverride ?? meta.basePrice * (1 + (r() - 0.5) * 0.01);

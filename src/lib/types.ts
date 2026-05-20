@@ -60,9 +60,13 @@ export interface PortfolioSummary {
 }
 
 export interface WatchlistItem {
-  symbol: string;
-  name: string;
-  type: AssetType;
+  symbol:   string;
+  name:     string;
+  nameCN?:  string;
+  type:     AssetType;
+  /** Yahoo Finance ticker (for custom-added symbols not in built-in registry) */
+  yfTicker?: string;
+  currency?: string;
 }
 
 export interface AIAnalysis {

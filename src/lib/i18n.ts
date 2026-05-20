@@ -10,6 +10,11 @@ export interface Translations {
   watchlist: {
     title: string; search: string;
     crypto: string; equities: string; cnHk: string; mainlandCN: string;
+    add: string; addAsset: string; addSearchPlaceholder: string;
+    popular: string; watching: string; noResults: string; noResultsSub: string;
+    noMatch: string; empty: string;
+    navigate: string; addRemove: string; closeModal: string;
+    reset: string; resetConfirm: string;
   };
   trade: {
     placeOrder: string; simple: string; pro: string;
@@ -130,7 +135,17 @@ export interface Translations {
 const en: Translations = {
   nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", strategies: "Strategies", notifications: "Notifications", settings: "Settings", ai: "AI Terminal" },
   topbar: { live: "Live" },
-  watchlist: { title: "Watchlist", search: "Search…", crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares" },
+  watchlist: {
+    title: "Watchlist", search: "Search watchlist…",
+    crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares",
+    add: "Add", addAsset: "Add asset",
+    addSearchPlaceholder: "Search by name, ticker, or 中文…",
+    popular: "Popular", watching: "watching",
+    noResults: "No results found", noResultsSub: "Try a different name or ticker symbol",
+    noMatch: "No assets match your search", empty: "Your watchlist is empty",
+    navigate: "navigate", addRemove: "add/remove", closeModal: "close",
+    reset: "Reset to default", resetConfirm: "Reset watchlist to default assets?",
+  },
   trade: {
     placeOrder: "Place Order", simple: "Simple", pro: "Pro",
     buy: "Buy", sell: "Sell", buying: "Buy", selling: "Sell",
@@ -251,7 +266,17 @@ const en: Translations = {
 const zh: Translations = {
   nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", strategies: "策略", notifications: "通知", settings: "设置", ai: "AI 终端" },
   topbar: { live: "实时" },
-  watchlist: { title: "自选股", search: "搜索…", crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股" },
+  watchlist: {
+    title: "自选股", search: "搜索自选股…",
+    crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股",
+    add: "添加", addAsset: "添加资产",
+    addSearchPlaceholder: "按名称、代码或 English 搜索…",
+    popular: "热门推荐", watching: "只关注",
+    noResults: "未找到结果", noResultsSub: "请尝试其他名称或代码",
+    noMatch: "没有匹配的资产", empty: "自选股为空",
+    navigate: "上下选择", addRemove: "添加/移除", closeModal: "关闭",
+    reset: "恢复默认", resetConfirm: "将自选股恢复为默认资产列表？",
+  },
   trade: {
     placeOrder: "下单", simple: "简单", pro: "专业",
     buy: "买入", sell: "卖出", buying: "买入", selling: "卖出",

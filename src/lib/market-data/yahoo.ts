@@ -20,24 +20,17 @@
 
 import type { Quote, Candle, CandleInterval } from "@/lib/types";
 import { ASSET_META, generateQuote, generateCandles } from "@/lib/mock";
+import { CATALOG_YF_TICKER, BINANCE_SYMBOLS } from "@/lib/asset-registry";
 
-// ── Symbol routing ─────────────────────────────────────────────────────────
+// ── Symbol routing — driven by the asset registry ─────────────────────────
 
-/** Internal symbol → Binance market symbol (crypto only) */
-const BINANCE_SYM: Record<string, string> = {
-  BTCUSDT: "BTCUSDT",
-  ETHUSDT: "ETHUSDT",
-  SOLUSDT: "SOLUSDT",
-};
+/** All known Binance crypto symbols (from registry) */
+const BINANCE_SYM: Record<string, string> = Object.fromEntries(
+  [...BINANCE_SYMBOLS].map((s) => [s, s])   // BTCUSDT → BTCUSDT, etc.
+);
 
-/** Internal symbol → Yahoo Finance ticker (stocks, HK, A-shares) */
-export const YF_TICKER: Record<string, string> = {
-  AAPL:   "AAPL",  TSLA:  "TSLA",  NVDA:  "NVDA",  MSFT:  "MSFT",  GOOGL: "GOOGL",
-  BABA:   "BABA",  PDD:   "PDD",   JD:    "JD",    BIDU:  "BIDU",  NIO:   "NIO",
-  HK0700: "0700.HK", HK9988: "9988.HK", HK3690: "3690.HK", HK1810: "1810.HK",
-  CNMTAI: "600519.SS", CNCATL: "300750.SZ", CNBYD: "002594.SZ",
-  CNPING: "601318.SS", CNICBC: "601398.SS",
-};
+/** Internal symbol → Yahoo Finance ticker (full registry) */
+export const YF_TICKER: Record<string, string> = CATALOG_YF_TICKER;
 
 /** Yahoo Finance interval/range for each of our candle intervals */
 const YF_RANGE: Record<CandleInterval, { interval: string; range: string }> = {

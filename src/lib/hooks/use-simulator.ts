@@ -22,6 +22,7 @@
 import { useEffect, useRef } from "react";
 import { useTradingStore } from "@/lib/store";
 import { ASSET_META, generateQuote, generateSparkline } from "@/lib/mock";
+import { getAsset } from "@/lib/asset-registry";
 import type { Quote } from "@/lib/types";
 
 const TICK_MS   = 800;
@@ -45,6 +46,12 @@ async function fetchRealQuotes(symbols: string[]): Promise<Quote[]> {
   }
 }
 
+/** All symbols to track = ASSET_META built-ins + any extra watchlist symbols */
+function allSymbols(): string[] {
+  const watchlist = useTradingStore.getState().watchlist.map((w) => w.symbol);
+  return [...new Set([...Object.keys(ASSET_META), ...watchlist])];
+}
+
 export function useSimulator() {
   const { updateQuotes, addPriceHistory } = useTradingStore();
   const pricesRef  = useRef<Record<string, number>>({});
@@ -55,7 +62,7 @@ export function useSimulator() {
     if (seededRef.current) return;
     seededRef.current = true;
 
-    const symbols = Object.keys(ASSET_META);
+    const symbols = allSymbols();
 
     (async () => {
       // Fetch real prices (falls back to mock internally)
@@ -85,15 +92,22 @@ export function useSimulator() {
       const snapQuotes = useTradingStore.getState().quotes;
       const updated: Quote[] = [];
 
-      for (const [symbol, meta] of Object.entries(ASSET_META)) {
+      // Walk all tracked symbols: ASSET_META entries + any extra watchlist symbols
+      const symbols = allSymbols();
+      for (const symbol of symbols) {
         const prev = prices[symbol];
         if (prev == null) continue;
 
-        // Mean-reversion pulls toward last real market price (basePrice is updated on resync)
-        const σ         = meta.volatility * 0.05;
-        const reversion = (meta.basePrice - prev) / meta.basePrice * 0.002;
-        const next      = Math.max(prev * (1 + normalRandom() * σ + reversion), 0.0001);
-        prices[symbol]  = next;
+        const meta    = ASSET_META[symbol];
+        const regEntry = !meta ? getAsset(symbol) : null;
+
+        // Volatility and reversion parameters
+        const volatility = meta?.volatility ?? 0.02;
+        const basePrice  = meta?.basePrice  ?? prev;
+        const σ          = volatility * 0.05;
+        const reversion  = (basePrice - prev) / Math.max(basePrice, 0.0001) * 0.002;
+        const next       = Math.max(prev * (1 + normalRandom() * σ + reversion), 0.0001);
+        prices[symbol]   = next;
 
         const prevQ  = snapQuotes[symbol];
         const open   = prevQ?.open ?? next;
@@ -101,16 +115,20 @@ export function useSimulator() {
         const low    = prevQ ? Math.min(prevQ.low,  next) : next;
         const change = next - open;
 
+        // Determine type/currency from meta, registry, or existing quote
+        const type     = meta?.type     ?? regEntry?.type     ?? prevQ?.type     ?? "stock";
+        const currency = meta?.currency ?? regEntry?.currency ?? prevQ?.currency ?? "USD";
+
         updated.push({
           symbol,
           price:     next,
           open, high, low,
-          volume:    prevQ?.volume ?? meta.avgVolume,
+          volume:    prevQ?.volume ?? meta?.avgVolume ?? 1_000_000,
           change,
           changePct: open > 0 ? (change / open) * 100 : 0,
           timestamp: Date.now(),
-          type:      meta.type,
-          currency:  meta.currency,
+          type,
+          currency,
         });
 
         addPriceHistory(symbol, next);
@@ -125,7 +143,7 @@ export function useSimulator() {
   // ── Periodic resync to real market prices (every 60 s) ───────────────────
   useEffect(() => {
     const id = setInterval(async () => {
-      const symbols = Object.keys(ASSET_META);
+      const symbols = allSymbols();
       const quotes  = await fetchRealQuotes(symbols);
 
       // Snap prices to real values (kills drift)
