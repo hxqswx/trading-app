@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { TradeOrder } from "@/lib/types";
 import { getDb } from "@/lib/db";
-import { DDL, DEFAULT_CASH } from "@/lib/db/schema";
+import { DDL_STATEMENTS, DEFAULT_CASH } from "@/lib/db/schema";
 import { getQuote } from "@/lib/market-data";
 import { ASSET_META, MOCK_PORTFOLIO } from "@/lib/mock";
 import { getAsset } from "@/lib/asset-registry";
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         await sql`SELECT 1 FROM orders LIMIT 1`;
       } catch {
         try {
-          await sql.query(DDL);
+          for (const stmt of DDL_STATEMENTS) { await sql.query(stmt); }
           // Seed default cash
           await sql`
             INSERT INTO settings (key, value)

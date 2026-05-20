@@ -9,7 +9,7 @@
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { DDL, DEFAULT_CASH } from "@/lib/db/schema";
+import { DDL_STATEMENTS, DEFAULT_CASH } from "@/lib/db/schema";
 import { getQuotes } from "@/lib/market-data";
 import { MOCK_PORTFOLIO, ASSET_META } from "@/lib/mock";
 import type { PortfolioSummary, Position } from "@/lib/types";
@@ -30,7 +30,7 @@ export async function GET() {
     try {
       await sql`SELECT 1 FROM positions LIMIT 1`;
     } catch {
-      await sql.query(DDL);
+      for (const stmt of DDL_STATEMENTS) { await sql.query(stmt); }
       await sql`INSERT INTO settings (key, value) VALUES ('cash', ${String(DEFAULT_CASH)}) ON CONFLICT (key) DO NOTHING`;
       for (const pos of MOCK_PORTFOLIO.positions) {
         await sql`

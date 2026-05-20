@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { DDL, DEFAULT_CASH } from "@/lib/db/schema";
+import { DDL_STATEMENTS, DEFAULT_CASH } from "@/lib/db/schema";
 import { MOCK_PORTFOLIO } from "@/lib/mock";
 
 export const runtime = "nodejs";
@@ -22,8 +22,10 @@ export async function POST() {
   }
 
   try {
-    // 1. Create tables — DDL is a raw string so use .query()
-    await sql.query(DDL);
+    // 1. Create tables — one statement at a time (Neon rejects multi-command calls)
+    for (const stmt of DDL_STATEMENTS) {
+      await sql.query(stmt);
+    }
 
     // 2. Seed portfolio if no positions exist yet
     const existing = (await sql`SELECT COUNT(*) AS cnt FROM positions`) as Array<{ cnt: string }>;
