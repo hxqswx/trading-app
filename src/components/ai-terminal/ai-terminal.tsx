@@ -321,7 +321,7 @@ export function AITerminal() {
 
   useEffect(() => {
     checkStatus();
-    const interval = setInterval(checkStatus, 10_000);
+    const interval = setInterval(checkStatus, 60_000); // 1-min poll — avoid burning Gemini quota
     return () => clearInterval(interval);
   }, [checkStatus]);
 

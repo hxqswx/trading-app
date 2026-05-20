@@ -110,6 +110,20 @@ export async function POST(req: NextRequest) {
       try {
         const llmRes = await streamChat(messages, { temperature: 0.3, maxTokens: 600 });
         if (!llmRes.ok || !llmRes.body) {
+          if (llmRes.status === 429) {
+            const msg =
+              "⚠  RATE LIMITED (429)\n\n" +
+              "Gemini free tier: 15 requests/minute · 1,500 requests/day\n\n" +
+              "→ Wait 10–15 seconds and try again.\n" +
+              "→ Or upgrade to a paid Gemini plan for higher limits.\n" +
+              "→ Alternatively switch to Groq (also free, higher limits):\n" +
+              "   AI_BASE_URL=https://api.groq.com/openai/v1\n" +
+              "   AI_MODEL=llama-3.3-70b-versatile";
+            controller.enqueue(sseChunk(msg));
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+            return;
+          }
           throw new Error(`LLM HTTP ${llmRes.status}`);
         }
 

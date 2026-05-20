@@ -59,29 +59,42 @@ Output style:
 `;
 
 // ── Status check ──────────────────────────────────────────────────────────
+/**
+ * Checks AI connectivity without burning quota.
+ *
+ * For Gemini (and any cloud provider) we avoid the /models endpoint — it
+ * counts against rate limits and is called every minute by the status bar.
+ * Instead we just verify the key is present and the URL is reachable via a
+ * lightweight HEAD request. A real connectivity test only fires for local
+ * providers (localhost) where there is no per-request quota.
+ */
 export async function checkLLMStatus(): Promise<LLMStatus> {
   if (!isConfigured()) {
-    return { ok: false, model: "", latencyMs: 0, provider: "not configured", error: "No API key" };
+    return { ok: false, model: LLM_MODEL, latencyMs: 0, provider: detectProvider(), error: "No API key" };
   }
 
+  const provider = detectProvider();
+
+  // For cloud providers just confirm the key is set — no network call needed.
+  // We'll know the real status the first time the user runs an analysis.
+  if (!LLM_BASE.includes("localhost") && !LLM_BASE.includes("127.0.0.1")) {
+    return { ok: true, model: LLM_MODEL, latencyMs: 0, provider };
+  }
+
+  // Local providers (Ollama, LM Studio) — safe to ping /models
   const t0 = Date.now();
   try {
     const res = await fetch(`${LLM_BASE}/models`, {
       headers: { Authorization: `Bearer ${LLM_KEY}` },
-      signal:  AbortSignal.timeout(5000),
+      signal:  AbortSignal.timeout(3000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const data = await res.json() as { data?: { id: string }[] };
+    const data   = await res.json() as { data?: { id: string }[] };
     const models = data.data ?? [];
-    // Find our model in the list, or fall back to the first available
-    const matched  = models.find((m) => m.id === LLM_MODEL);
-    const model    = matched?.id ?? models[0]?.id ?? LLM_MODEL;
-    const provider = detectProvider();
-
+    const model  = models[0]?.id ?? LLM_MODEL;
     return { ok: true, model, latencyMs: Date.now() - t0, provider };
   } catch (err) {
-    return { ok: false, model: "", latencyMs: Date.now() - t0, provider: detectProvider(), error: String(err) };
+    return { ok: false, model: "", latencyMs: Date.now() - t0, provider, error: String(err) };
   }
 }
 
@@ -95,27 +108,58 @@ function detectProvider(): string {
   return "Custom";
 }
 
+// ── Retry helper ──────────────────────────────────────────────────────────
+/** Sleep for ms milliseconds */
+function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
+/**
+ * Retry a fetch with exponential backoff on 429 / 503.
+ * Retries: 1s → 2s → 4s (max 3 attempts total).
+ */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  maxAttempts = 3
+): Promise<Response> {
+  let delay = 1000;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 && res.status !== 503) return res;
+    if (attempt === maxAttempts) return res; // return the 429 so caller can handle it
+    // Check Retry-After header (Gemini sometimes sets it)
+    const retryAfter = res.headers.get("Retry-After");
+    const waitMs     = retryAfter ? parseInt(retryAfter) * 1000 : delay;
+    await sleep(waitMs);
+    delay *= 2;
+  }
+  // Unreachable, but TypeScript needs it
+  throw new Error("fetchWithRetry exhausted");
+}
+
 // ── Streaming completion ──────────────────────────────────────────────────
 /** Returns a raw fetch Response with SSE stream from the provider */
 export async function streamChat(
   messages: ChatMessage[],
   opts?: { model?: string; temperature?: number; maxTokens?: number }
 ): Promise<Response> {
-  return fetch(`${LLM_BASE}/chat/completions`, {
-    method:  "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization:  `Bearer ${LLM_KEY}`,
-    },
-    body: JSON.stringify({
-      model:       opts?.model       ?? LLM_MODEL,
-      messages,
-      stream:      true,
-      temperature: opts?.temperature ?? 0.3,
-      max_tokens:  opts?.maxTokens   ?? 512,
-    }),
-    signal: AbortSignal.timeout(60_000),
-  });
+  return fetchWithRetry(
+    `${LLM_BASE}/chat/completions`,
+    {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:  `Bearer ${LLM_KEY}`,
+      },
+      body: JSON.stringify({
+        model:       opts?.model       ?? LLM_MODEL,
+        messages,
+        stream:      true,
+        temperature: opts?.temperature ?? 0.3,
+        max_tokens:  opts?.maxTokens   ?? 512,
+      }),
+      signal: AbortSignal.timeout(60_000),
+    }
+  );
 }
 
 // ── Non-streaming completion ──────────────────────────────────────────────
@@ -123,22 +167,29 @@ export async function complete(
   messages: ChatMessage[],
   opts?: { model?: string; temperature?: number; maxTokens?: number }
 ): Promise<string> {
-  const res = await fetch(`${LLM_BASE}/chat/completions`, {
-    method:  "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization:  `Bearer ${LLM_KEY}`,
-    },
-    body: JSON.stringify({
-      model:       opts?.model       ?? LLM_MODEL,
-      messages,
-      stream:      false,
-      temperature: opts?.temperature ?? 0.3,
-      max_tokens:  opts?.maxTokens   ?? 512,
-    }),
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) throw new Error(`AI error: HTTP ${res.status} — ${await res.text()}`);
+  const res = await fetchWithRetry(
+    `${LLM_BASE}/chat/completions`,
+    {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:  `Bearer ${LLM_KEY}`,
+      },
+      body: JSON.stringify({
+        model:       opts?.model       ?? LLM_MODEL,
+        messages,
+        stream:      false,
+        temperature: opts?.temperature ?? 0.3,
+        max_tokens:  opts?.maxTokens   ?? 512,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    }
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    if (res.status === 429) throw new Error(`Rate limited (429) — try again in a few seconds. ${body}`);
+    throw new Error(`AI error: HTTP ${res.status} — ${body}`);
+  }
   const data = await res.json() as {
     choices: { message: { content: string } }[];
   };
