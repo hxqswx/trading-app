@@ -50,7 +50,7 @@ export interface Translations {
   dashboard: {
     title: string; subtitle: string;
     greeting: string; greetingSub: string; today: string;
-    positions: string; topMovers: string;
+    positions: string; topMovers: string; gainers: string; losers: string;
     noPositions: string;
   };
   portfolio: {
@@ -185,6 +185,7 @@ const en: Translations = {
     title: "Dashboard", subtitle: "Portfolio overview & market summary",
     greeting: "Good morning 👋", greetingSub: "Your portfolio is looking great today.",
     today: "today", positions: "Open Positions", topMovers: "Top Movers",
+    gainers: "Top Gainers", losers: "Top Losers",
     noPositions: "No open positions",
   },
   portfolio: {
@@ -324,6 +325,7 @@ const zh: Translations = {
     title: "总览", subtitle: "投资组合概览与市场摘要",
     greeting: "早上好 👋", greetingSub: "您的投资组合今日表现不错。",
     today: "今日", positions: "当前持仓", topMovers: "涨跌幅榜",
+    gainers: "涨幅榜", losers: "跌幅榜",
     noPositions: "暂无持仓",
   },
   portfolio: {

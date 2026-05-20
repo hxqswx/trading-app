@@ -10,6 +10,7 @@ import { fmtCurrency, fmtPercent, colorClass } from "@/lib/utils";
 import { currencySymbol, ASSET_META } from "@/lib/mock";
 import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown, DollarSign, Wallet, BarChart2, ArrowRight } from "lucide-react";
+import { useState } from "react";
 
 export default function DashboardPage() {
   return (
@@ -167,17 +168,49 @@ function TopMovers() {
   const { quotes, setActiveSymbol, lang } = useTradingStore();
   const t = useT();
   const router = useRouter();
-  const sorted = Object.values(quotes).sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 6);
+  const [tab, setTab] = useState<"gainers" | "losers">("gainers");
+
+  const allQuotes = Object.values(quotes);
+  const gainers = allQuotes.filter(q => q.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 8);
+  const losers  = allQuotes.filter(q => q.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 8);
+  const list    = tab === "gainers" ? gainers : losers;
+  const loading = allQuotes.length === 0;
 
   function goTo(symbol: string) { setActiveSymbol(symbol); router.push(`/trade/${symbol}`); }
 
   return (
-    <Card className="p-0 overflow-hidden h-full">
-      <div className="px-5 py-4 border-b border-[var(--border)]">
-        <h2 className="text-sm font-semibold">{t.dashboard.topMovers}</h2>
+    <Card className="p-0 overflow-hidden h-full flex flex-col">
+      {/* Header with tabs */}
+      <div className="px-5 pt-4 pb-0 border-b border-[var(--border)] shrink-0">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setTab("gainers")}
+            className={`flex items-center gap-1.5 pb-3 text-sm font-semibold border-b-2 transition-colors ${
+              tab === "gainers"
+                ? "border-[var(--green)] text-[var(--green)]"
+                : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            <TrendingUp size={13} />
+            {t.dashboard.gainers}
+          </button>
+          <button
+            onClick={() => setTab("losers")}
+            className={`flex items-center gap-1.5 pb-3 text-sm font-semibold border-b-2 transition-colors ${
+              tab === "losers"
+                ? "border-[var(--red)] text-[var(--red)]"
+                : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            <TrendingDown size={13} />
+            {t.dashboard.losers}
+          </button>
+        </div>
       </div>
-      <div className="flex flex-col">
-        {sorted.length === 0
+
+      {/* List */}
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        {loading
           ? [...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-5 py-3.5 border-b border-[var(--border)] last:border-0">
                 <div className="h-8 w-8 rounded-lg bg-[var(--surface-2)] animate-pulse" />
@@ -187,11 +220,17 @@ function TopMovers() {
                 </div>
               </div>
             ))
-          : sorted.map((q) => {
+          : list.length === 0
+          ? (
+              <div className="flex flex-col items-center justify-center flex-1 py-10 text-sm text-[var(--muted)]">
+                {tab === "gainers" ? <TrendingUp size={28} className="mb-2 opacity-30" /> : <TrendingDown size={28} className="mb-2 opacity-30" />}
+                {tab === "gainers" ? (lang === "zh" ? "暂无上涨标的" : "No gainers yet") : (lang === "zh" ? "暂无下跌标的" : "No losers yet")}
+              </div>
+            )
+          : list.map((q) => {
               const meta   = ASSET_META[q.symbol];
               const up     = q.changePct >= 0;
               const ticker = q.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
-              const sym    = currencySymbol(q.currency);
               const name   = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? q.symbol);
               return (
                 <button key={q.symbol} onClick={() => goTo(q.symbol)}
