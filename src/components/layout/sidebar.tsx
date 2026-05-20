@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, LayoutDashboard, Wallet, Bell, Settings, TrendingUp } from "lucide-react";
+import { BarChart2, LayoutDashboard, Wallet, Bell, Settings, TrendingUp, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTradingStore } from "@/lib/store";
 import { useT } from "@/lib/hooks/use-t";
@@ -18,6 +18,7 @@ export function Sidebar() {
     { href: "/markets",     icon: BarChart2,        label: t.nav.markets     },
     { href: "/portfolio",   icon: Wallet,           label: t.nav.portfolio   },
     { href: "/strategies",  icon: TrendingUp,       label: t.nav.strategies  },
+    { href: "/ai",          icon: Brain,            label: t.nav.ai          },
   ];
 
   return (

@@ -4,6 +4,7 @@ export interface Translations {
   nav: {
     dashboard: string; markets: string; portfolio: string;
     strategies: string; notifications: string; settings: string;
+    ai: string;
   };
   topbar: { live: string };
   watchlist: {
@@ -93,12 +94,41 @@ export interface Translations {
     aboutMarket: string; aboutDB: string; aboutCache: string; aboutAuth: string;
     viewOnGithub: string;
   };
+  aiTerminal: {
+    title: string;
+    subtitle: string;
+    statusOnline: string;
+    statusOffline: string;
+    statusChecking: string;
+    latency: string;
+    model: string;
+    provider: string;
+    newsFeed: string;
+    noNews: string;
+    analysisTerminal: string;
+    analyse: string;
+    analysing: string;
+    selectAsset: string;
+    chat: string;
+    chatPlaceholder: string;
+    send: string;
+    clearChat: string;
+    you: string;
+    quantai: string;
+    setupHint: string;
+    setupStep1: string;
+    setupStep2: string;
+    setupStep3: string;
+    bullish: string;
+    bearish: string;
+    neutral: string;
+  };
   loading: string;
   error: string;
 }
 
 const en: Translations = {
-  nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", strategies: "Strategies", notifications: "Notifications", settings: "Settings" },
+  nav: { dashboard: "Dashboard", markets: "Markets", portfolio: "Portfolio", strategies: "Strategies", notifications: "Notifications", settings: "Settings", ai: "AI Terminal" },
   topbar: { live: "Live" },
   watchlist: { title: "Watchlist", search: "Search…", crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares" },
   trade: {
@@ -185,12 +215,41 @@ const en: Translations = {
     aboutCache: "Cache", aboutAuth: "Authentication",
     viewOnGithub: "View on GitHub",
   },
+  aiTerminal: {
+    title: "AI Command Center",
+    subtitle: "Local LLM · Real-time analysis · Zero cloud dependency",
+    statusOnline: "LLM ONLINE",
+    statusOffline: "LLM OFFLINE",
+    statusChecking: "CONNECTING…",
+    latency: "latency",
+    model: "Model",
+    provider: "Provider",
+    newsFeed: "News Feed",
+    noNews: "No news fetched yet — select an asset and analyse",
+    analysisTerminal: "Analysis Terminal",
+    analyse: "RUN ANALYSIS",
+    analysing: "ANALYSING…",
+    selectAsset: "← Select an asset from the watchlist",
+    chat: "AI Chat",
+    chatPlaceholder: "Ask QuantAI anything about markets…",
+    send: "Send",
+    clearChat: "Clear",
+    you: "YOU",
+    quantai: "QUANTAI",
+    setupHint: "Connect your local LLM to enable AI analysis",
+    setupStep1: "1. Download LM Studio from lmstudio.ai",
+    setupStep2: "2. Load any GGUF model and start the server",
+    setupStep3: "3. Restart the dev server — AI will auto-connect",
+    bullish: "BULL",
+    bearish: "BEAR",
+    neutral: "NEUT",
+  },
   loading: "Loading…",
   error: "Something went wrong",
 };
 
 const zh: Translations = {
-  nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", strategies: "策略", notifications: "通知", settings: "设置" },
+  nav: { dashboard: "总览", markets: "市场", portfolio: "持仓", strategies: "策略", notifications: "通知", settings: "设置", ai: "AI 终端" },
   topbar: { live: "实时" },
   watchlist: { title: "自选股", search: "搜索…", crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股" },
   trade: {
@@ -276,6 +335,35 @@ const zh: Translations = {
     aboutMarket: "市场数据", aboutDB: "数据库",
     aboutCache: "缓存", aboutAuth: "身份验证",
     viewOnGithub: "在 GitHub 查看",
+  },
+  aiTerminal: {
+    title: "AI 指挥中心",
+    subtitle: "本地大模型 · 实时分析 · 零云依赖",
+    statusOnline: "模型在线",
+    statusOffline: "模型离线",
+    statusChecking: "连接中…",
+    latency: "延迟",
+    model: "模型",
+    provider: "提供商",
+    newsFeed: "新闻动态",
+    noNews: "暂无新闻 — 请选择资产并运行分析",
+    analysisTerminal: "分析终端",
+    analyse: "运行分析",
+    analysing: "分析中…",
+    selectAsset: "← 从自选股中选择资产",
+    chat: "AI 对话",
+    chatPlaceholder: "向 QuantAI 询问任何市场问题…",
+    send: "发送",
+    clearChat: "清除",
+    you: "您",
+    quantai: "QUANTAI",
+    setupHint: "连接本地大模型以启用 AI 分析",
+    setupStep1: "1. 从 lmstudio.ai 下载 LM Studio",
+    setupStep2: "2. 加载任意 GGUF 模型并启动服务",
+    setupStep3: "3. 重启开发服务器 — AI 将自动连接",
+    bullish: "看涨",
+    bearish: "看跌",
+    neutral: "中性",
   },
   loading: "加载中…",
   error: "发生错误",
