@@ -1,16 +1,20 @@
 /**
  * POST /api/order
  *
- * Places a simulated trade order.
+ * Places a simulated (or live Alpaca paper) trade order.
  *
- * With DATABASE_URL set:
- *   - Gets current market price from Yahoo Finance / cache
- *   - Persists the order to the `orders` table
- *   - Updates the `positions` table (weighted-avg cost basis on buys, reduce qty on sells)
+ * Routing:
+ *   US stocks + Alpaca enabled  → submit to Alpaca Paper Trading API,
+ *                                  use Alpaca fill price, then record in Neon DB
+ *   Everything else             → Yahoo Finance price, record in Neon DB only
+ *
+ * DB mode (DATABASE_URL set):
+ *   - Persists order to `orders` table
+ *   - Updates `positions` table (weighted-avg cost basis on buys, reduce qty on sells)
  *   - Adjusts cash in `settings`
  *
- * Without DATABASE_URL:
- *   - Returns a simulated filled-order confirmation (no persistence)
+ * Mock mode (no DATABASE_URL):
+ *   - Returns a simulated fill confirmation (no persistence)
  */
 import { NextRequest, NextResponse } from "next/server";
 import type { TradeOrder } from "@/lib/types";
@@ -19,6 +23,10 @@ import { DDL_STATEMENTS, DEFAULT_CASH } from "@/lib/db/schema";
 import { getQuote } from "@/lib/market-data";
 import { ASSET_META, MOCK_PORTFOLIO } from "@/lib/mock";
 import { getAsset } from "@/lib/asset-registry";
+import {
+  isAlpacaEnabled, submitAlpacaOrder,
+} from "@/lib/alpaca";
+import { US_STOCK_SYMBOLS } from "@/lib/market-data/alpaca";
 
 export const runtime = "nodejs";
 
@@ -36,42 +44,68 @@ export async function POST(req: NextRequest) {
     if (order.qty <= 0) {
       return NextResponse.json({ error: "qty must be positive" }, { status: 400 });
     }
-    // Accept symbols from ASSET_META (mock) OR from the asset registry (forex, etc.)
     const regEntry = getAsset(order.symbol);
     if (!(order.symbol in ASSET_META) && !regEntry) {
       return NextResponse.json({ error: `Unknown symbol: ${order.symbol}` }, { status: 400 });
     }
 
-    // ── Fill price ────────────────────────────────────────────────────────────
-    const liveQuote = await getQuote(order.symbol);
-    const fillPrice = order.type === "limit" && order.limitPrice
-      ? order.limitPrice
-      : liveQuote.price;
-
-    const totalCost = fillPrice * order.qty;
-    // Use ASSET_META if available; fall back to asset registry entry
     const meta = ASSET_META[order.symbol] ?? {
       type:     regEntry!.type,
       currency: regEntry!.currency,
     };
 
-    const sql = getDb();
+    // ── Fill price ────────────────────────────────────────────────────────────
+    const useAlpaca   = isAlpacaEnabled() && US_STOCK_SYMBOLS.has(order.symbol);
+    let fillPrice: number;
+    let alpacaOrderId: string | undefined;
+
+    if (useAlpaca) {
+      // ── Alpaca paper trading path ──────────────────────────────────────────
+      try {
+        const alpacaOrder = await submitAlpacaOrder({
+          symbol:      order.symbol,
+          qty:         order.qty,
+          side:        order.side,
+          type:        order.type as "market" | "limit" | "stop" | "stop_limit",
+          limit_price: order.limitPrice,
+          stop_price:  order.stopPrice,
+        });
+        alpacaOrderId = alpacaOrder.id;
+        // filled_avg_price is set immediately for paper market orders
+        fillPrice = alpacaOrder.filled_avg_price
+          ? parseFloat(alpacaOrder.filled_avg_price)
+          : (await getQuote(order.symbol)).price;
+      } catch (alpacaErr) {
+        console.error("[/api/order] Alpaca order failed, falling back to local price:", alpacaErr);
+        const liveQuote = await getQuote(order.symbol);
+        fillPrice = order.type === "limit" && order.limitPrice
+          ? order.limitPrice
+          : liveQuote.price;
+      }
+    } else {
+      // ── Local price path (crypto, HK, CN, forex) ──────────────────────────
+      const liveQuote = await getQuote(order.symbol);
+      fillPrice = order.type === "limit" && order.limitPrice
+        ? order.limitPrice
+        : liveQuote.price;
+    }
+
+    const totalCost = fillPrice * order.qty;
+    const sql       = getDb();
 
     // ── DB path ───────────────────────────────────────────────────────────────
     if (sql) {
-      // Auto-init tables on first use — no manual /api/init needed
+      // Auto-init tables on first use
       try {
         await sql`SELECT 1 FROM orders LIMIT 1`;
       } catch {
         try {
           for (const stmt of DDL_STATEMENTS) { await sql.query(stmt); }
-          // Seed default cash
           await sql`
             INSERT INTO settings (key, value)
             VALUES ('cash', ${String(DEFAULT_CASH)})
             ON CONFLICT (key) DO NOTHING
           `;
-          // Seed mock positions so the user starts with a sample portfolio
           for (const pos of MOCK_PORTFOLIO.positions) {
             await sql`
               INSERT INTO positions (symbol, qty, avg_entry_price, asset_type, currency)
@@ -81,12 +115,20 @@ export async function POST(req: NextRequest) {
           }
         } catch (initErr) {
           console.error("[/api/order] auto-init failed — falling back to mock mode:", initErr);
-          // DB unreachable: return a simulated fill so the UI isn't broken
           return NextResponse.json({
-            id: `ord-${Date.now()}`, symbol: order.symbol, side: order.side,
-            type: order.type, qty: order.qty, status: "filled",
-            filled_qty: order.qty, fill_price: fillPrice, total_cost: totalCost,
-            currency: meta.currency, created_at: new Date().toISOString(), db_mode: false,
+            id:          alpacaOrderId ?? `ord-${Date.now()}`,
+            symbol:      order.symbol,
+            side:        order.side,
+            type:        order.type,
+            qty:         order.qty,
+            status:      "filled",
+            filled_qty:  order.qty,
+            fill_price:  fillPrice,
+            total_cost:  totalCost,
+            currency:    meta.currency,
+            created_at:  new Date().toISOString(),
+            db_mode:     false,
+            alpaca_mode: useAlpaca,
           });
         }
       }
@@ -137,40 +179,33 @@ export async function POST(req: NextRequest) {
                 avg_entry_price = ${newAvgPrice},
                 updated_at      = NOW()
         `;
-        await sql`
-          UPDATE settings SET value = ${String(cash - totalCost)} WHERE key = 'cash'
-        `;
+        await sql`UPDATE settings SET value = ${String(cash - totalCost)} WHERE key = 'cash'`;
       } else {
-        // sell
         const newQty = existQty - order.qty;
         if (newQty <= 0) {
           await sql`DELETE FROM positions WHERE symbol = ${order.symbol}`;
         } else {
-          await sql`
-            UPDATE positions SET qty = ${newQty}, updated_at = NOW()
-            WHERE symbol = ${order.symbol}
-          `;
+          await sql`UPDATE positions SET qty = ${newQty}, updated_at = NOW() WHERE symbol = ${order.symbol}`;
         }
-        await sql`
-          UPDATE settings SET value = ${String(cash + totalCost)} WHERE key = 'cash'
-        `;
+        await sql`UPDATE settings SET value = ${String(cash + totalCost)} WHERE key = 'cash'`;
       }
     }
 
-    // ── Response (DB or mock mode) ────────────────────────────────────────────
+    // ── Response ──────────────────────────────────────────────────────────────
     return NextResponse.json({
-      id:         `ord-${Date.now()}`,
-      symbol:     order.symbol,
-      side:       order.side,
-      type:       order.type,
-      qty:        order.qty,
-      status:     "filled",
-      filled_qty: order.qty,
-      fill_price: fillPrice,
-      total_cost: totalCost,
-      currency:   meta.currency,
-      created_at: new Date().toISOString(),
-      db_mode:    !!sql,
+      id:          alpacaOrderId ?? `ord-${Date.now()}`,
+      symbol:      order.symbol,
+      side:        order.side,
+      type:        order.type,
+      qty:         order.qty,
+      status:      "filled",
+      filled_qty:  order.qty,
+      fill_price:  fillPrice,
+      total_cost:  totalCost,
+      currency:    meta.currency,
+      created_at:  new Date().toISOString(),
+      db_mode:     !!sql,
+      alpaca_mode: useAlpaca,
     });
   } catch (err) {
     console.error("[/api/order]", err);
