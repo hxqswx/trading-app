@@ -13,7 +13,7 @@ import { ForexPanel } from "@/components/watchlist/forex-panel";
 import { Card } from "@/components/ui/card";
 import { ASSET_META, currencySymbol } from "@/lib/mock";
 import { BarChart2, BookOpen, ArrowUpDown, Sparkles, TrendingUp, Star, Globe } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getDataSource } from "@/lib/utils";
 import { StrategyPanel } from "@/components/strategies/strategy-panel";
 
 interface TradeViewProps { symbol: string }
@@ -317,6 +317,21 @@ function RangeBar({ symbol }: { symbol: string }) {
             {q.volume >= 1e9 ? `${(q.volume/1e9).toFixed(1)}B` : q.volume >= 1e6 ? `${(q.volume/1e6).toFixed(1)}M` : q.volume.toFixed(0)}
           </span></span>
         )}
+        {/* Data source badge */}
+        {(() => {
+          const src = getDataSource(q.type);
+          return (
+            <span className={`flex items-center gap-1 ml-1 ${src.textClass}`}>
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                {src.live && (
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${src.dotClass}`} />
+                )}
+                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${src.dotClass}`} />
+              </span>
+              {src.name}
+            </span>
+          );
+        })()}
       </div>
     </div>
   );
