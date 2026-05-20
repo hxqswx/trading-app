@@ -2,22 +2,39 @@
 
 import { usePortfolio } from "@/lib/hooks/use-portfolio";
 import { useT } from "@/lib/hooks/use-t";
+import { useTradingStore } from "@/lib/store";
 import { PortfolioSummaryCards } from "@/components/portfolio/portfolio-summary";
 import { PositionsTable } from "@/components/portfolio/positions-table";
+import { PortfolioChart } from "@/components/portfolio/portfolio-chart";
+import { BalanceButton } from "@/components/portfolio/balance-panel";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { fmtCurrency, colorClass, fmtPercent } from "@/lib/utils";
 
 export default function PortfolioPage() {
-  const t = useT();
+  const t    = useT();
+  const lang = useTradingStore((s) => s.lang);
+
   return (
     <div className="p-6 flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold">{t.portfolio.title}</h1>
-        <p className="text-sm text-[var(--muted)] mt-0.5">{t.portfolio.subtitle}</p>
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">{t.portfolio.title}</h1>
+          <p className="text-sm text-[var(--muted)] mt-0.5">{t.portfolio.subtitle}</p>
+        </div>
+        <BalanceButton />
       </div>
 
+      {/* Equity history chart */}
+      <PortfolioChart />
+
+      {/* Summary cards */}
       <PortfolioSummaryCards />
+
+      {/* Allocation bar */}
       <AllocationChart />
+
+      {/* Positions table */}
       <PositionsTable />
     </div>
   );
@@ -25,7 +42,8 @@ export default function PortfolioPage() {
 
 function AllocationChart() {
   const { portfolio, loading } = usePortfolio();
-  const t = useT();
+  const t    = useT();
+  const lang = useTradingStore((s) => s.lang);
 
   if (loading || !portfolio) {
     return <Card className="h-48 animate-pulse" />;
