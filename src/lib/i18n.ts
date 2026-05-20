@@ -68,6 +68,11 @@ export interface Translations {
     high: string; low: string;
   };
   badge: { stock: string; crypto: string; hk: string; cn: string; forex: string };
+  forexPanel: {
+    title: string; subtitle: string;
+    cnyRates: string; majorPairs: string;
+    updated: string; loading: string;
+  };
   notFound: { title: string; sub: string; back: string };
   strategies: {
     title: string; subtitle: string; tabLabel: string;
@@ -190,6 +195,11 @@ const en: Translations = {
   },
   table: { asset: "Asset", qty: "Qty", avgCost: "Avg Cost", current: "Current", value: "Market Value", pnl: "P&L", high: "High", low: "Low" },
   badge: { stock: "US", crypto: "Crypto", hk: "HK", cn: "A股", forex: "FX" },
+  forexPanel: {
+    title: "FX Rates", subtitle: "Live exchange rates",
+    cnyRates: "CNY Rates", majorPairs: "Major Pairs",
+    updated: "Updated", loading: "Loading…",
+  },
   notFound: { title: "Page not found", sub: "The page you're looking for doesn't exist.", back: "Back to Dashboard" },
   strategies: {
     title: "Strategy Screener",
@@ -321,6 +331,11 @@ const zh: Translations = {
   },
   table: { asset: "资产", qty: "数量", avgCost: "均价", current: "现价", value: "市值", pnl: "盈亏", high: "最高", low: "最低" },
   badge: { stock: "美股", crypto: "加密", hk: "港股", cn: "A股", forex: "外汇" },
+  forexPanel: {
+    title: "外汇", subtitle: "实时汇率",
+    cnyRates: "人民币汇率", majorPairs: "主要货币对",
+    updated: "更新于", loading: "加载中…",
+  },
   notFound: { title: "页面未找到", sub: "您访问的页面不存在。", back: "返回总览" },
   strategies: {
     title: "策略筛选器",

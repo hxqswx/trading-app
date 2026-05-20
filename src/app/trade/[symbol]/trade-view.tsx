@@ -9,20 +9,23 @@ import { OrderBook } from "@/components/orderbook/orderbook";
 import { TradePanel } from "@/components/chart/trade-panel";
 import { AIPanel } from "@/components/ai-panel/ai-panel";
 import { Watchlist } from "@/components/watchlist/watchlist";
+import { ForexPanel } from "@/components/watchlist/forex-panel";
 import { Card } from "@/components/ui/card";
 import { ASSET_META, currencySymbol } from "@/lib/mock";
-import { BarChart2, BookOpen, ArrowUpDown, Sparkles, TrendingUp } from "lucide-react";
+import { BarChart2, BookOpen, ArrowUpDown, Sparkles, TrendingUp, Star, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StrategyPanel } from "@/components/strategies/strategy-panel";
 
 interface TradeViewProps { symbol: string }
 
 type MobileTab = "chart" | "book" | "trade" | "ai" | "strategy";
+type LeftTab   = "watchlist" | "forex";
 
 export function TradeView({ symbol }: TradeViewProps) {
   const { setActiveSymbol } = useTradingStore();
   const t = useT();
-  const [tab, setTab] = useState<MobileTab>("chart");
+  const [tab,     setTab]     = useState<MobileTab>("chart");
+  const [leftTab, setLeftTab] = useState<LeftTab>("watchlist");
 
   useEffect(() => { setActiveSymbol(symbol); }, [symbol, setActiveSymbol]);
 
@@ -37,9 +40,34 @@ export function TradeView({ symbol }: TradeViewProps) {
   return (
     <div className="flex h-full min-h-0">
 
-      {/* ── Desktop: left watchlist sidebar ──────────────────────────────── */}
+      {/* ── Desktop: left sidebar with Watchlist / FX tabs ──────────────── */}
       <aside className="w-64 border-r border-[var(--border)] shrink-0 hidden xl:flex flex-col overflow-hidden">
-        <Watchlist />
+        {/* Tab switcher */}
+        <div className="flex border-b border-[var(--border)] shrink-0">
+          {([
+            { id: "watchlist" as LeftTab, icon: <Star    size={12} />, label: t.watchlist.title },
+            { id: "forex"     as LeftTab, icon: <Globe   size={12} />, label: t.forexPanel.title },
+          ]).map(({ id, icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setLeftTab(id)}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors relative",
+                leftTab === id ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              )}
+            >
+              {icon}
+              {label}
+              {leftTab === id && (
+                <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--accent)] rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+        {/* Panel */}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          {leftTab === "watchlist" ? <Watchlist /> : <ForexPanel />}
+        </div>
       </aside>
 
       {/* ── Center column ──────────────────────────────────────────────── */}
