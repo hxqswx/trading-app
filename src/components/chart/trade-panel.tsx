@@ -58,7 +58,7 @@ function qtyDp(isForex: boolean, isCrypto: boolean): number {
 
 export function TradePanel({ symbol }: TradePanelProps) {
   const { quotes, tradeMode, setTradeMode, addNotification, settings,
-          portfolio, portfolioLoading, fetchPortfolio } = useTradingStore();
+          portfolio, portfolioLoading, fetchPortfolio, applyOrderOptimistic } = useTradingStore();
   const t = useT();
 
   // ── Asset metadata ─────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ export function TradePanel({ symbol }: TradePanelProps) {
         setMessage(data.error ?? "Order failed");
       } else {
         setStatus("success");
-        const fp = fmtPrice(execPrice, rateSym, isForex, isCrypto);
+        const fp = fmtPrice(data.fill_price ?? execPrice, rateSym, isForex, isCrypto);
         setMessage(`✓ ${side === "buy" ? t.trade.bought : t.trade.sold} ${qty} ${baseCurrency} @ ${fp}`);
         addNotification({
           type:   "order",
@@ -174,8 +174,9 @@ export function TradePanel({ symbol }: TradePanelProps) {
           symbol,
         });
         setQty("");
-        // Refresh portfolio after trade
-        fetchPortfolio();
+        // ── Instantly reflect the trade in the UI (optimistic), then confirm from server ──
+        applyOrderOptimistic(side, symbol, parseFloat(qty), data.fill_price ?? execPrice, assetType, currency);
+        fetchPortfolio(); // reconcile with real DB values
         setTimeout(() => setStatus("idle"), 4000);
       }
     } catch (err) {

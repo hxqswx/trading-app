@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   Quote, OrderBook, AIAnalysis, WatchlistItem,
-  AppNotification, UserSettings, PortfolioSummary,
+  AppNotification, UserSettings, PortfolioSummary, AssetType,
 } from "./types";
 import type { Lang } from "./i18n";
 
@@ -71,6 +71,11 @@ interface TradingStore {
   portfolio: PortfolioSummary | null;
   portfolioLoading: boolean;
   fetchPortfolio: () => Promise<void>;
+  /** Instantly reflect a filled order in the store (optimistic), before the server round-trip */
+  applyOrderOptimistic: (
+    side: "buy" | "sell", symbol: string, qty: number, fillPrice: number,
+    assetType: AssetType, currency: string,
+  ) => void;
 
   // ── Watchlist ─────────────────────────────────────────────────────────────
   watchlist: WatchlistItem[];
@@ -106,7 +111,7 @@ interface TradingStore {
 
 export const useTradingStore = create<TradingStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // ── Market data ────────────────────────────────────────────────────
       activeSymbol: "BTCUSDT",
       setActiveSymbol: (activeSymbol) => set({ activeSymbol }),
@@ -141,6 +146,62 @@ export const useTradingStore = create<TradingStore>()(
           if (res.ok) set({ portfolio: await res.json() as PortfolioSummary });
         } catch { /* non-fatal */ }
         finally { set({ portfolioLoading: false }); }
+      },
+      applyOrderOptimistic: (side, symbol, qty, fillPrice, assetType, currency) => {
+        const portfolio = (get() as { portfolio: PortfolioSummary | null }).portfolio;
+        if (!portfolio) return;
+        const totalCost  = qty * fillPrice;
+        const existing   = portfolio.positions.find((p) => p.symbol === symbol);
+
+        let newPositions = [...portfolio.positions];
+        let newCash      = portfolio.cash;
+
+        if (side === "buy") {
+          newCash -= totalCost;
+          if (existing) {
+            const newQty = existing.qty + qty;
+            const newAvg = (existing.qty * existing.avgEntryPrice + qty * fillPrice) / newQty;
+            newPositions = newPositions.map((p) =>
+              p.symbol === symbol
+                ? { ...p, qty: newQty, avgEntryPrice: newAvg, currentPrice: fillPrice,
+                    marketValue: newQty * fillPrice,
+                    unrealizedPnl: (fillPrice - newAvg) * newQty,
+                    unrealizedPnlPct: newAvg > 0 ? ((fillPrice - newAvg) / newAvg) * 100 : 0 }
+                : p
+            );
+          } else {
+            newPositions.push({
+              symbol, qty, avgEntryPrice: fillPrice, currentPrice: fillPrice,
+              marketValue: qty * fillPrice, unrealizedPnl: 0, unrealizedPnlPct: 0,
+              type: assetType, currency,
+            });
+          }
+        } else {
+          // sell
+          newCash += totalCost;
+          const newQty = (existing?.qty ?? 0) - qty;
+          if (newQty <= 0) {
+            newPositions = newPositions.filter((p) => p.symbol !== symbol);
+          } else {
+            newPositions = newPositions.map((p) =>
+              p.symbol === symbol
+                ? { ...p, qty: newQty, marketValue: newQty * fillPrice,
+                    unrealizedPnl: (fillPrice - p.avgEntryPrice) * newQty,
+                    unrealizedPnlPct: p.avgEntryPrice > 0 ? ((fillPrice - p.avgEntryPrice) / p.avgEntryPrice) * 100 : 0 }
+                : p
+            );
+          }
+        }
+
+        const totalMarketValue = newPositions.reduce((s, p) => s + p.marketValue, 0);
+        set({
+          portfolio: {
+            ...portfolio,
+            cash:     newCash,
+            equity:   newCash + totalMarketValue,
+            positions: newPositions,
+          },
+        });
       },
 
       // ── Watchlist ──────────────────────────────────────────────────────
