@@ -41,6 +41,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultOrderType: "market",
   confirmOrders:    false,
   pnlDisplay:       "absolute",
+  theme:            "dark",
 };
 
 const HISTORY_LIMIT    = 60;

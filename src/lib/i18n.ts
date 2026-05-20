@@ -94,7 +94,7 @@ export interface Translations {
     sectionAppearance: string; sectionTrading: string;
     sectionAccount: string; sectionAbout: string;
     // Appearance
-    language: string; theme: string; themeHint: string; dark: string;
+    language: string; theme: string; themeHint: string; dark: string; light: string;
     // Trading
     defaultOrderType: string; defaultOrderTypeHint: string;
     confirmOrders: string; confirmOrdersHint: string;
@@ -230,7 +230,7 @@ const en: Translations = {
     title: "Settings",
     sectionAppearance: "Appearance", sectionTrading: "Trading",
     sectionAccount: "Account", sectionAbout: "About",
-    language: "Language", theme: "Theme", themeHint: "More themes coming soon", dark: "Dark",
+    language: "Language", theme: "Theme", themeHint: "", dark: "Dark", light: "Light",
     defaultOrderType: "Default Order Type",
     defaultOrderTypeHint: "Pre-selects the order type when you open a trade panel",
     confirmOrders: "Confirm Orders",
@@ -370,7 +370,7 @@ const zh: Translations = {
     title: "设置",
     sectionAppearance: "外观", sectionTrading: "交易",
     sectionAccount: "账户", sectionAbout: "关于",
-    language: "语言", theme: "主题", themeHint: "更多主题即将推出", dark: "暗色",
+    language: "语言", theme: "主题", themeHint: "", dark: "暗色", light: "浅色",
     defaultOrderType: "默认订单类型",
     defaultOrderTypeHint: "打开交易面板时预选订单类型",
     confirmOrders: "订单确认",

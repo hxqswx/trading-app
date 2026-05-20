@@ -103,11 +103,13 @@ export interface AppNotification {
 
 // ── User Settings ──────────────────────────────────────────────────────────
 export type PnlDisplay = "absolute" | "percent";
+export type Theme = "dark" | "light";
 
 export interface UserSettings {
   defaultOrderType: "market" | "limit" | "stop" | "stop_limit";
   confirmOrders:    boolean;
   pnlDisplay:       PnlDisplay;
+  theme:            Theme;
 }
 
 // ── Strategies ─────────────────────────────────────────────────────────────

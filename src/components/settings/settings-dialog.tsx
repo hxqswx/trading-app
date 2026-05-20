@@ -77,7 +77,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 
 // ── Sections ───────────────────────────────────────────────────────────────
 function AppearanceSection() {
-  const { lang, setLang } = useTradingStore();
+  const { lang, setLang, settings, updateSetting } = useTradingStore();
   const t = useT();
   return (
     <div className="space-y-1">
@@ -88,11 +88,14 @@ function AppearanceSection() {
           onChange={setLang}
         />
       </Row>
-      <Row label={t.settings.theme} hint={t.settings.themeHint}>
+      <Row label={t.settings.theme}>
         <OptionGroup
-          options={[{ value: "dark", label: t.settings.dark }]}
-          value="dark"
-          onChange={() => {}}
+          options={[
+            { value: "dark",  label: t.settings.dark  },
+            { value: "light", label: t.settings.light },
+          ]}
+          value={settings.theme ?? "dark"}
+          onChange={(v) => updateSetting("theme", v as "dark" | "light")}
         />
       </Row>
     </div>
