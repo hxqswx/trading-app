@@ -197,15 +197,42 @@ export function TradeView({ symbol }: TradeViewProps) {
   );
 }
 
-// ── Desktop right panel with AI / Strategy tab switcher ──────────────────
+// ── Desktop right panel — TradePanel (top, resizable) + AI/Strategy (bottom) ──
 function RightPanel({ symbol, t, width }: { symbol: string; t: ReturnType<typeof useT>; width: number }) {
-  const [rightTab, setRightTab] = useState<"ai" | "strategy">("ai");
+  const [rightTab,  setRightTab]  = useState<"ai" | "strategy">("ai");
+  // Vertical: height of the TradePanel section (px). Default fits a filled form.
+  const [tradeH, setTradeH] = useState(440);
+  const vRef = useRef<{ startY: number; startH: number } | null>(null);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!vRef.current) return;
+      const dy = e.clientY - vRef.current.startY;
+      setTradeH(Math.max(240, Math.min(740, vRef.current.startH + dy)));
+    }
+    function onUp() {
+      vRef.current = null;
+      document.body.style.cursor     = "";
+      document.body.style.userSelect = "";
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup",   onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  function startVResize(e: React.MouseEvent) {
+    e.preventDefault();
+    vRef.current = { startY: e.clientY, startH: tradeH };
+    document.body.style.cursor     = "row-resize";
+    document.body.style.userSelect = "none";
+  }
+
   return (
     <aside
       style={{ width }}
       className="border-l border-[var(--border)] shrink-0 hidden md:flex flex-col overflow-hidden"
     >
-      {/* Tab switcher */}
+      {/* ── AI / Strategy tab switcher (always on top) ── */}
       <div className="flex border-b border-[var(--border)] shrink-0">
         {[
           { id: "ai"       as const, icon: <Sparkles size={13} />,   label: t.ai.title           },
@@ -223,9 +250,21 @@ function RightPanel({ symbol, t, width }: { symbol: string; t: ReturnType<typeof
           </button>
         ))}
       </div>
-      {/* Panel content */}
-      <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
+
+      {/* ── Trade panel — fixed height, scrolls internally ── */}
+      <div style={{ height: tradeH }} className="shrink-0 overflow-y-auto p-4">
         <TradePanel symbol={symbol} />
+      </div>
+
+      {/* ── Vertical resize handle ── */}
+      <div
+        onMouseDown={startVResize}
+        className="h-1.5 shrink-0 cursor-row-resize bg-[var(--border)] hover:bg-[var(--accent)]/50 active:bg-[var(--accent)]/70 transition-colors"
+        title="Drag to resize"
+      />
+
+      {/* ── AI / Strategy — fills remaining height, scrollable ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
         {rightTab === "ai"       && <AIPanel symbol={symbol} />}
         {rightTab === "strategy" && <StrategyPanel symbol={symbol} />}
       </div>
