@@ -1,18 +1,30 @@
 /**
- * llm.ts — OpenAI-compatible local LLM client
+ * llm.ts — OpenAI-compatible AI client
  *
- * Works with LM Studio (default port 1234) and Ollama (port 11434).
- * Both expose /v1/chat/completions and /v1/models.
+ * Default provider: Google Gemini (free tier via OpenAI-compatible endpoint)
+ *   Endpoint: https://generativelanguage.googleapis.com/v1beta/openai
+ *   Free:     1,500 req/day · 15 req/min · no credit card required
+ *   Key:      https://aistudio.google.com → API Keys
  *
- * Env vars (optional — falls back to LM Studio defaults):
- *   LOCAL_LLM_URL   e.g. http://localhost:1234/v1
- *   LOCAL_LLM_MODEL e.g. local-model  (or a specific model name)
- *   LOCAL_LLM_API_KEY e.g. lm-studio (ignored by most local servers)
+ * Works with any OpenAI-compatible provider by changing env vars:
+ *   Groq:     AI_BASE_URL=https://api.groq.com/openai/v1
+ *   OpenAI:   AI_BASE_URL=https://api.openai.com/v1
+ *   Ollama:   AI_BASE_URL=http://localhost:11434/v1
+ *
+ * Env vars (set in .env.local):
+ *   AI_BASE_URL   — provider base URL (default: Gemini)
+ *   AI_MODEL      — model name       (default: gemini-2.0-flash)
+ *   AI_API_KEY    — API key          (required; leave blank for mock mode)
  */
 
-export const LLM_BASE    = (process.env.LOCAL_LLM_URL    ?? "http://localhost:1234/v1").replace(/\/$/, "");
-export const LLM_MODEL   = process.env.LOCAL_LLM_MODEL   ?? "local-model";
-export const LLM_API_KEY = process.env.LOCAL_LLM_API_KEY ?? "lm-studio";
+export const LLM_BASE  = (process.env.AI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai").replace(/\/$/, "");
+export const LLM_MODEL = process.env.AI_MODEL    ?? "gemini-2.0-flash";
+export const LLM_KEY   = process.env.AI_API_KEY  ?? "";
+
+/** True when an API key is configured */
+export function isConfigured(): boolean {
+  return LLM_KEY.trim().length > 0;
+}
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -48,25 +60,43 @@ Output style:
 
 // ── Status check ──────────────────────────────────────────────────────────
 export async function checkLLMStatus(): Promise<LLMStatus> {
+  if (!isConfigured()) {
+    return { ok: false, model: "", latencyMs: 0, provider: "not configured", error: "No API key" };
+  }
+
   const t0 = Date.now();
   try {
     const res = await fetch(`${LLM_BASE}/models`, {
-      headers: { Authorization: `Bearer ${LLM_API_KEY}` },
-      signal: AbortSignal.timeout(3000),
+      headers: { Authorization: `Bearer ${LLM_KEY}` },
+      signal:  AbortSignal.timeout(5000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const data = await res.json() as { data?: { id: string }[] };
     const models = data.data ?? [];
-    const model  = models[0]?.id ?? LLM_MODEL;
-    const provider = LLM_BASE.includes("11434") ? "Ollama" : "LM Studio";
+    // Find our model in the list, or fall back to the first available
+    const matched  = models.find((m) => m.id === LLM_MODEL);
+    const model    = matched?.id ?? models[0]?.id ?? LLM_MODEL;
+    const provider = detectProvider();
+
     return { ok: true, model, latencyMs: Date.now() - t0, provider };
   } catch (err) {
-    return { ok: false, model: "", latencyMs: Date.now() - t0, provider: "offline", error: String(err) };
+    return { ok: false, model: "", latencyMs: Date.now() - t0, provider: detectProvider(), error: String(err) };
   }
 }
 
+function detectProvider(): string {
+  if (LLM_BASE.includes("googleapis"))    return "Google Gemini";
+  if (LLM_BASE.includes("groq"))          return "Groq";
+  if (LLM_BASE.includes("openai"))        return "OpenAI";
+  if (LLM_BASE.includes("openrouter"))    return "OpenRouter";
+  if (LLM_BASE.includes("anthropic"))     return "Anthropic";
+  if (LLM_BASE.includes("localhost"))     return "Local LLM";
+  return "Custom";
+}
+
 // ── Streaming completion ──────────────────────────────────────────────────
-/** Returns a raw fetch Response with SSE stream from the LLM */
+/** Returns a raw fetch Response with SSE stream from the provider */
 export async function streamChat(
   messages: ChatMessage[],
   opts?: { model?: string; temperature?: number; maxTokens?: number }
@@ -74,8 +104,8 @@ export async function streamChat(
   return fetch(`${LLM_BASE}/chat/completions`, {
     method:  "POST",
     headers: {
-      "Content-Type":  "application/json",
-      Authorization:   `Bearer ${LLM_API_KEY}`,
+      "Content-Type": "application/json",
+      Authorization:  `Bearer ${LLM_KEY}`,
     },
     body: JSON.stringify({
       model:       opts?.model       ?? LLM_MODEL,
@@ -96,8 +126,8 @@ export async function complete(
   const res = await fetch(`${LLM_BASE}/chat/completions`, {
     method:  "POST",
     headers: {
-      "Content-Type":  "application/json",
-      Authorization:   `Bearer ${LLM_API_KEY}`,
+      "Content-Type": "application/json",
+      Authorization:  `Bearer ${LLM_KEY}`,
     },
     body: JSON.stringify({
       model:       opts?.model       ?? LLM_MODEL,
@@ -108,7 +138,7 @@ export async function complete(
     }),
     signal: AbortSignal.timeout(30_000),
   });
-  if (!res.ok) throw new Error(`LLM error: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`AI error: HTTP ${res.status} — ${await res.text()}`);
   const data = await res.json() as {
     choices: { message: { content: string } }[];
   };
@@ -125,8 +155,8 @@ export interface AnalysisPromptOpts {
   low:       number;
   volume:    number;
   currency:  string;
-  strategies?: string;   // e.g. "RSI: BULLISH, MACD: HOLD, BB: BEARISH"
-  news?:       string;   // recent headlines, one per line
+  strategies?: string;
+  news?:       string;
   lang?:       "en" | "zh";
 }
 
@@ -164,7 +194,7 @@ Provide a structured analysis covering:
 Be specific with price levels. Be concise.`;
 }
 
-// ── JSON analysis via LLM ──────────────────────────────────────────────────
+// ── Structured JSON analysis ───────────────────────────────────────────────
 export interface StructuredAnalysis {
   sentiment:  "bullish" | "bearish" | "neutral";
   summary:    string;
@@ -173,10 +203,12 @@ export interface StructuredAnalysis {
   riskLevel:  "low" | "medium" | "high";
 }
 
-/** Ask the LLM for a JSON-structured analysis. Falls back to null on failure. */
+/** Ask the AI for a JSON-structured analysis. Returns null on failure. */
 export async function getStructuredAnalysis(
   opts: AnalysisPromptOpts
 ): Promise<StructuredAnalysis | null> {
+  if (!isConfigured()) return null;
+
   const jsonPrompt = buildAnalysisPrompt(opts) + `
 
 Respond ONLY with valid JSON matching this exact schema (no markdown, no explanation):
@@ -197,7 +229,7 @@ Respond ONLY with valid JSON matching this exact schema (no markdown, no explana
       { temperature: 0.1, maxTokens: 400 }
     );
 
-    // Extract JSON block (LLMs sometimes wrap in ```json)
+    // Extract JSON block (models sometimes wrap in ```json)
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in response");
     return JSON.parse(jsonMatch[0]) as StructuredAnalysis;

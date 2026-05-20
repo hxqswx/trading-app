@@ -9,7 +9,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { ANALYST_SYSTEM_PROMPT, streamChat, ChatMessage, LLM_BASE } from "@/lib/llm";
+import { ANALYST_SYSTEM_PROMPT, streamChat, ChatMessage, isConfigured } from "@/lib/llm";
 
 export const dynamic = "force-dynamic";
 
@@ -33,21 +33,15 @@ export async function POST(req: NextRequest) {
     return encoder.encode(`data: ${JSON.stringify({ delta: text })}\n\n`);
   }
 
-  // ── Check LLM ───────────────────────────────────────────────────────────
-  let llmAvailable = false;
-  try {
-    const check = await fetch(`${LLM_BASE}/models`, { signal: AbortSignal.timeout(2000) });
-    llmAvailable = check.ok;
-  } catch {
-    llmAvailable = false;
-  }
-
-  if (!llmAvailable) {
+  // ── Check availability ──────────────────────────────────────────────────
+  if (!isConfigured()) {
     const offline =
-      "⚠  Local LLM is offline.\n\n" +
-      "Start LM Studio (lmstudio.ai) or Ollama and load a model.\n" +
-      "Default endpoint: http://localhost:1234/v1\n\n" +
-      "Once running, refresh the page and the AI terminal will connect automatically.";
+      "⚠  AI not configured.\n\n" +
+      "Add your Gemini API key to .env.local:\n" +
+      "  AI_API_KEY=your_key_here\n\n" +
+      "Get a free key at: https://aistudio.google.com → API Keys\n" +
+      "Free tier: 1,500 requests/day · no credit card required.\n\n" +
+      "Restart the dev server after adding the key.";
 
     const stream = new ReadableStream({
       async start(controller) {

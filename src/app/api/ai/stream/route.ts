@@ -11,27 +11,27 @@
  */
 
 import { NextRequest } from "next/server";
-import { ANALYST_SYSTEM_PROMPT, buildAnalysisPrompt, streamChat, LLM_BASE } from "@/lib/llm";
+import { ANALYST_SYSTEM_PROMPT, buildAnalysisPrompt, streamChat, isConfigured } from "@/lib/llm";
 
 export const dynamic = "force-dynamic";
 
-const MOCK_ANALYSIS = `SENTIMENT → NEUTRAL [M] — Insufficient local LLM connection.
+const MOCK_ANALYSIS = `SENTIMENT → NEUTRAL [M] — AI not configured.
 
 KEY LEVELS
   Support:    Check recent swing lows
   Resistance: Check recent swing highs
 
 SIGNALS
-  [M] ⬆ Local LLM offline — start LM Studio or Ollama to enable AI analysis
-  [M] → Connect to http://localhost:1234/v1 (LM Studio) or :11434 (Ollama)
-  [L] → Set LOCAL_LLM_URL in .env.local then restart the dev server
+  [M] → AI_API_KEY not set in .env.local
+  [M] → Get a free Gemini API key at aistudio.google.com
+  [L] → Add AI_API_KEY=your_key_here to .env.local and restart
 
-RISK → MEDIUM — Unable to assess without live data feed
+RISK → MEDIUM — Unable to assess without AI connection
 
 ─────────────────────────────────────────
-TIP: Download LM Studio from lmstudio.ai
-     Load any GGUF model and start the server
-     This dashboard will auto-detect it
+TIP: Google Gemini is free — 1,500 req/day
+     aistudio.google.com → Get API Key
+     Add to .env.local: AI_API_KEY=...
 ─────────────────────────────────────────`;
 
 export async function POST(req: NextRequest) {
@@ -72,14 +72,8 @@ export async function POST(req: NextRequest) {
     { role: "user"   as const, content: prompt },
   ];
 
-  // ── Check LLM availability ─────────────────────────────────────────────
-  let llmAvailable = false;
-  try {
-    const check = await fetch(`${LLM_BASE}/models`, { signal: AbortSignal.timeout(2000) });
-    llmAvailable = check.ok;
-  } catch {
-    llmAvailable = false;
-  }
+  // ── Check availability ─────────────────────────────────────────────────
+  const llmAvailable = isConfigured();
 
   // ── SSE encoder ────────────────────────────────────────────────────────
   const encoder = new TextEncoder();
