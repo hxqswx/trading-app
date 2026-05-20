@@ -8,8 +8,23 @@ export const ASSET_META: Record<string, {
   basePrice: number; volatility: number; avgVolume: number;
   description: string; descriptionCN: string;
   sector?: string; sectorCN?: string;
-  market: "US" | "HK" | "CN" | "CRYPTO";
+  market: "US" | "HK" | "CN" | "CRYPTO" | "FX";
 }> = {
+  // ── Forex — CNY exchange rates ─────────────────────────────────────────────
+  USDCNY: { name:"US Dollar / CNY",    nameCN:"美元兑人民币",     type:"forex", currency:"CNY", basePrice:7.24,   volatility:0.002, avgVolume:0, description:"US Dollar to Chinese Yuan exchange rate",    descriptionCN:"美元兑人民币汇率",   market:"FX" },
+  EURCNY: { name:"Euro / CNY",         nameCN:"欧元兑人民币",     type:"forex", currency:"CNY", basePrice:7.85,   volatility:0.003, avgVolume:0, description:"Euro to Chinese Yuan exchange rate",        descriptionCN:"欧元兑人民币汇率",   market:"FX" },
+  GBPCNY: { name:"GBP / CNY",          nameCN:"英镑兑人民币",     type:"forex", currency:"CNY", basePrice:9.20,   volatility:0.003, avgVolume:0, description:"British Pound to Chinese Yuan exchange rate",descriptionCN:"英镑兑人民币汇率",   market:"FX" },
+  JPYCNY: { name:"JPY / CNY",          nameCN:"日元兑人民币",     type:"forex", currency:"CNY", basePrice:0.0481, volatility:0.002, avgVolume:0, description:"Japanese Yen to Chinese Yuan exchange rate", descriptionCN:"日元兑人民币汇率",   market:"FX" },
+  HKDCNY: { name:"HKD / CNY",          nameCN:"港元兑人民币",     type:"forex", currency:"CNY", basePrice:0.928,  volatility:0.001, avgVolume:0, description:"HK Dollar to Chinese Yuan exchange rate",   descriptionCN:"港元兑人民币汇率",   market:"FX" },
+  AUDCNY: { name:"AUD / CNY",          nameCN:"澳元兑人民币",     type:"forex", currency:"CNY", basePrice:4.62,   volatility:0.003, avgVolume:0, description:"Australian Dollar to Chinese Yuan exchange rate",descriptionCN:"澳元兑人民币汇率",market:"FX" },
+  CADCNY: { name:"CAD / CNY",          nameCN:"加元兑人民币",     type:"forex", currency:"CNY", basePrice:5.28,   volatility:0.003, avgVolume:0, description:"Canadian Dollar to Chinese Yuan exchange rate",descriptionCN:"加元兑人民币汇率",market:"FX" },
+  CHFCNY: { name:"CHF / CNY",          nameCN:"瑞郎兑人民币",     type:"forex", currency:"CNY", basePrice:8.15,   volatility:0.002, avgVolume:0, description:"Swiss Franc to Chinese Yuan exchange rate",  descriptionCN:"瑞郎兑人民币汇率",   market:"FX" },
+  SGDCNY: { name:"SGD / CNY",          nameCN:"新加坡元兑人民币", type:"forex", currency:"CNY", basePrice:5.37,   volatility:0.002, avgVolume:0, description:"Singapore Dollar to Chinese Yuan exchange rate",descriptionCN:"新加坡元兑人民币汇率",market:"FX" },
+  KRWCNY: { name:"KRW / CNY",          nameCN:"韩元兑人民币",     type:"forex", currency:"CNY", basePrice:0.0052, volatility:0.002, avgVolume:0, description:"Korean Won to Chinese Yuan exchange rate",   descriptionCN:"韩元兑人民币汇率",   market:"FX" },
+  EURUSD: { name:"EUR / USD",          nameCN:"欧元兑美元",       type:"forex", currency:"USD", basePrice:1.085,  volatility:0.003, avgVolume:0, description:"Euro to US Dollar exchange rate",           descriptionCN:"欧元兑美元汇率",     market:"FX" },
+  USDJPY: { name:"USD / JPY",          nameCN:"美元兑日元",       type:"forex", currency:"USD", basePrice:150.5,  volatility:0.002, avgVolume:0, description:"US Dollar to Japanese Yen exchange rate",   descriptionCN:"美元兑日元汇率",     market:"FX" },
+  GBPUSD: { name:"GBP / USD",          nameCN:"英镑兑美元",       type:"forex", currency:"USD", basePrice:1.27,   volatility:0.003, avgVolume:0, description:"British Pound to US Dollar exchange rate",  descriptionCN:"英镑兑美元汇率",     market:"FX" },
+
   // ── Crypto ─────────────────────────────────────────────────────────────────
   BTCUSDT: { name: "Bitcoin",   nameCN: "比特币",   type: "crypto", currency: "USD", basePrice: 68_400,  volatility: 0.018, avgVolume: 25_000,      description: "Digital gold & store of value",        descriptionCN: "数字黄金与价值储存",               market: "CRYPTO" },
   ETHUSDT: { name: "Ethereum",  nameCN: "以太坊",   type: "crypto", currency: "USD", basePrice: 3_520,   volatility: 0.022, avgVolume: 350_000,     description: "Smart contract blockchain platform",    descriptionCN: "智能合约区块链平台",               market: "CRYPTO" },

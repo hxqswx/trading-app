@@ -32,11 +32,13 @@ interface SearchResult {
 
 function TypeBadge({ type, market }: { type: string; market: string }) {
   const label =
+    type === "forex"             ? "FX"     :
     type === "crypto"            ? "CRYPTO" :
     market === "HK" || type === "hk" ? "港股"   :
     market === "CN" || type === "cn" ? "A股"    : "US";
 
   const color =
+    type === "forex"             ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
     type === "crypto"            ? "bg-purple-500/15 text-purple-400 border-purple-500/30" :
     market === "HK" || type === "hk" ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
     market === "CN" || type === "cn" ? "bg-red-500/15 text-red-400 border-red-500/30" :
@@ -53,12 +55,16 @@ function TypeBadge({ type, market }: { type: string; market: string }) {
 
 function AssetIcon({ type, symbol }: { type: string; symbol: string }) {
   const colors: Record<string, string> = {
+    forex:  "bg-emerald-500/15 text-emerald-400",
     crypto: "bg-purple-500/15 text-purple-400",
     hk:     "bg-amber-500/15 text-amber-400",
     cn:     "bg-red-500/15 text-red-400",
     stock:  "bg-blue-500/15 text-blue-400",
   };
-  const label = symbol.replace("USDT","").replace(/^(HK|CN)/,"").slice(0,2);
+  // Forex: show 3-letter base currency (e.g. "USD" for USDCNY)
+  const label = type === "forex"
+    ? symbol.slice(0, 3)
+    : symbol.replace("USDT","").replace(/^(HK|CN)/,"").slice(0,2);
   return (
     <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0", colors[type] ?? colors.stock)}>
       {label}
@@ -78,7 +84,9 @@ function ResultRow({
 }) {
   const { lang } = useTradingStore();
   const displayName = lang === "zh" && result.nameCN ? result.nameCN : result.name;
-  const ticker = result.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
+  const ticker = result.type === "forex"
+    ? result.symbol.slice(0, 3) + "/" + result.symbol.slice(3)
+    : result.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
 
   return (
     <button
@@ -206,6 +214,7 @@ export function AddAssetModal({ onClose }: { onClose: () => void }) {
 
   // Popular suggestions when no query
   const SUGGESTIONS = [
+    { group: t.watchlist.forex,     symbols: ["USDCNY","EURCNY","GBPCNY","JPYCNY"] },
     { group: t.watchlist.crypto,    symbols: ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT"] },
     { group: t.watchlist.equities,  symbols: ["AAPL","NVDA","META","AMZN"] },
     { group: t.watchlist.cnHk,      symbols: ["HK0700","HK3690","HK9988","HK1024"] },
@@ -293,7 +302,11 @@ export function AddAssetModal({ onClose }: { onClose: () => void }) {
                           )}
                         >
                           <span className="text-xs font-bold truncate flex-1">
-                            {sym.replace("USDT","").replace(/^(HK|CN)/,"")}
+                            {(() => {
+                              const entry = searchAssets(sym, 1).find((a) => a.symbol === sym);
+                              if (entry?.type === "forex") return sym.slice(0,3) + "/" + sym.slice(3);
+                              return sym.replace("USDT","").replace(/^(HK|CN)/,"");
+                            })()}
                           </span>
                           <span className="text-[10px] text-[var(--muted)] truncate hidden sm:block">{suggName(sym)}</span>
                           {inList

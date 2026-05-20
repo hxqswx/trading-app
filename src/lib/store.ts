@@ -9,6 +9,12 @@ import type {
 import type { Lang } from "./i18n";
 
 export const DEFAULT_WATCHLIST: WatchlistItem[] = [
+  // Forex — CNY exchange rates
+  { symbol: "USDCNY", name: "US Dollar / CNY",   nameCN: "美元兑人民币",  type: "forex", currency: "CNY" },
+  { symbol: "EURCNY", name: "Euro / CNY",         nameCN: "欧元兑人民币",  type: "forex", currency: "CNY" },
+  { symbol: "GBPCNY", name: "GBP / CNY",          nameCN: "英镑兑人民币",  type: "forex", currency: "CNY" },
+  { symbol: "JPYCNY", name: "JPY / CNY",          nameCN: "日元兑人民币",  type: "forex", currency: "CNY" },
+  { symbol: "HKDCNY", name: "HKD / CNY",          nameCN: "港元兑人民币",  type: "forex", currency: "CNY" },
   // Crypto
   { symbol: "BTCUSDT", name: "Bitcoin",        nameCN: "比特币",      type: "crypto" },
   { symbol: "ETHUSDT", name: "Ethereum",        nameCN: "以太坊",      type: "crypto" },

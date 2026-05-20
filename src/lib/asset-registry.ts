@@ -11,7 +11,7 @@
 import type { AssetType } from "./types";
 
 export interface AssetEntry {
-  /** Internal app symbol (e.g. "AAPL", "HK0700", "CNMTAI", "BTCUSDT") */
+  /** Internal app symbol (e.g. "AAPL", "HK0700", "CNMTAI", "BTCUSDT", "USDCNY") */
   symbol:    string;
   /** Yahoo Finance ticker (may differ from symbol) */
   yfTicker:  string;
@@ -21,7 +21,7 @@ export interface AssetEntry {
   nameCN:    string;
   type:      AssetType;
   currency:  "USD" | "HKD" | "CNY";
-  market:    "US" | "HK" | "CN" | "CRYPTO";
+  market:    "US" | "HK" | "CN" | "CRYPTO" | "FX";
   /** Approximate base price for mock fallback */
   basePrice: number;
   sector?:   string;
@@ -29,6 +29,22 @@ export interface AssetEntry {
 }
 
 export const ASSET_CATALOG: AssetEntry[] = [
+
+  // ── Forex — CNY pairs (primary) ────────────────────────────────────────
+  { symbol:"USDCNY", yfTicker:"USDCNY=X", name:"US Dollar / Chinese Yuan",       nameCN:"美元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:7.24  },
+  { symbol:"EURCNY", yfTicker:"EURCNY=X", name:"Euro / Chinese Yuan",            nameCN:"欧元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:7.85  },
+  { symbol:"GBPCNY", yfTicker:"GBPCNY=X", name:"British Pound / Chinese Yuan",   nameCN:"英镑兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:9.20  },
+  { symbol:"JPYCNY", yfTicker:"JPYCNY=X", name:"Japanese Yen / Chinese Yuan",    nameCN:"日元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:0.0481},
+  { symbol:"HKDCNY", yfTicker:"HKDCNY=X", name:"Hong Kong Dollar / Chinese Yuan",nameCN:"港元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:0.928 },
+  { symbol:"AUDCNY", yfTicker:"AUDCNY=X", name:"Australian Dollar / Chinese Yuan",nameCN:"澳元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:4.62  },
+  { symbol:"CADCNY", yfTicker:"CADCNY=X", name:"Canadian Dollar / Chinese Yuan", nameCN:"加元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:5.28  },
+  { symbol:"CHFCNY", yfTicker:"CHFCNY=X", name:"Swiss Franc / Chinese Yuan",     nameCN:"瑞郎兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:8.15  },
+  { symbol:"SGDCNY", yfTicker:"SGDCNY=X", name:"Singapore Dollar / Chinese Yuan",nameCN:"新加坡元兑人民币",type:"forex",currency:"CNY", market:"FX", basePrice:5.37  },
+  { symbol:"KRWCNY", yfTicker:"KRWCNY=X", name:"Korean Won / Chinese Yuan",      nameCN:"韩元兑人民币",  type:"forex", currency:"CNY", market:"FX", basePrice:0.0052},
+  // ── Forex — major cross pairs ──────────────────────────────────────────
+  { symbol:"EURUSD", yfTicker:"EURUSD=X", name:"Euro / US Dollar",               nameCN:"欧元兑美元",    type:"forex", currency:"USD", market:"FX", basePrice:1.085 },
+  { symbol:"USDJPY", yfTicker:"JPY=X",    name:"US Dollar / Japanese Yen",       nameCN:"美元兑日元",    type:"forex", currency:"USD", market:"FX", basePrice:150.5 },
+  { symbol:"GBPUSD", yfTicker:"GBPUSD=X", name:"British Pound / US Dollar",      nameCN:"英镑兑美元",    type:"forex", currency:"USD", market:"FX", basePrice:1.27  },
 
   // ── Crypto ─────────────────────────────────────────────────────────────
   { symbol:"BTCUSDT",  yfTicker:"BTC-USD",    name:"Bitcoin",          nameCN:"比特币",      type:"crypto", currency:"USD", market:"CRYPTO", basePrice:77000  },
@@ -169,6 +185,11 @@ export const CATALOG_YF_TICKER: Record<string, string> = Object.fromEntries(
 /** Symbols that use Binance (all XXXUSDT crypto) */
 export const BINANCE_SYMBOLS = new Set(
   ASSET_CATALOG.filter((a) => a.type === "crypto").map((a) => a.symbol)
+);
+
+/** Forex symbols — routed via Yahoo Finance =X tickers */
+export const FOREX_SYMBOLS = new Set(
+  ASSET_CATALOG.filter((a) => a.type === "forex").map((a) => a.symbol)
 );
 
 // ── Client-side fuzzy search ───────────────────────────────────────────────

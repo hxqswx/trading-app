@@ -9,7 +9,7 @@ export interface Translations {
   topbar: { live: string };
   watchlist: {
     title: string; search: string;
-    crypto: string; equities: string; cnHk: string; mainlandCN: string;
+    forex: string; crypto: string; equities: string; cnHk: string; mainlandCN: string;
     add: string; addAsset: string; addSearchPlaceholder: string;
     popular: string; watching: string; noResults: string; noResultsSub: string;
     noMatch: string; empty: string;
@@ -67,7 +67,7 @@ export interface Translations {
     current: string; value: string; pnl: string;
     high: string; low: string;
   };
-  badge: { stock: string; crypto: string; hk: string; cn: string };
+  badge: { stock: string; crypto: string; hk: string; cn: string; forex: string };
   notFound: { title: string; sub: string; back: string };
   strategies: {
     title: string; subtitle: string; tabLabel: string;
@@ -137,7 +137,7 @@ const en: Translations = {
   topbar: { live: "Live" },
   watchlist: {
     title: "Watchlist", search: "Search watchlist…",
-    crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares",
+    forex: "FX Rates", crypto: "Crypto", equities: "US Equities", cnHk: "HK Stocks", mainlandCN: "A-Shares",
     add: "Add", addAsset: "Add asset",
     addSearchPlaceholder: "Search by name, ticker, or 中文…",
     popular: "Popular", watching: "watching",
@@ -189,7 +189,7 @@ const en: Translations = {
     change24h: "24h Change", volume: "Volume",
   },
   table: { asset: "Asset", qty: "Qty", avgCost: "Avg Cost", current: "Current", value: "Market Value", pnl: "P&L", high: "High", low: "Low" },
-  badge: { stock: "US", crypto: "Crypto", hk: "HK", cn: "A股" },
+  badge: { stock: "US", crypto: "Crypto", hk: "HK", cn: "A股", forex: "FX" },
   notFound: { title: "Page not found", sub: "The page you're looking for doesn't exist.", back: "Back to Dashboard" },
   strategies: {
     title: "Strategy Screener",
@@ -268,7 +268,7 @@ const zh: Translations = {
   topbar: { live: "实时" },
   watchlist: {
     title: "自选股", search: "搜索自选股…",
-    crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股",
+    forex: "汇率", crypto: "加密货币", equities: "美股", cnHk: "港股", mainlandCN: "A股",
     add: "添加", addAsset: "添加资产",
     addSearchPlaceholder: "按名称、代码或 English 搜索…",
     popular: "热门推荐", watching: "只关注",
@@ -320,7 +320,7 @@ const zh: Translations = {
     change24h: "24小时涨跌", volume: "成交量",
   },
   table: { asset: "资产", qty: "数量", avgCost: "均价", current: "现价", value: "市值", pnl: "盈亏", high: "最高", low: "最低" },
-  badge: { stock: "美股", crypto: "加密", hk: "港股", cn: "A股" },
+  badge: { stock: "美股", crypto: "加密", hk: "港股", cn: "A股", forex: "外汇" },
   notFound: { title: "页面未找到", sub: "您访问的页面不存在。", back: "返回总览" },
   strategies: {
     title: "策略筛选器",

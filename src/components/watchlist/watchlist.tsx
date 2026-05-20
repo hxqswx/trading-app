@@ -38,10 +38,11 @@ export function Watchlist() {
     );
   });
 
-  const cryptos  = filtered.filter((w) => w.type === "crypto");
-  const stocks   = filtered.filter((w) => w.type === "stock");
-  const hkStocks = filtered.filter((w) => w.type === "hk");
-  const cnStocks = filtered.filter((w) => w.type === "cn");
+  const forexPairs = filtered.filter((w) => w.type === "forex");
+  const cryptos    = filtered.filter((w) => w.type === "crypto");
+  const stocks     = filtered.filter((w) => w.type === "stock");
+  const hkStocks   = filtered.filter((w) => w.type === "hk");
+  const cnStocks   = filtered.filter((w) => w.type === "cn");
 
   return (
     <>
@@ -90,6 +91,21 @@ export function Watchlist() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {forexPairs.length > 0 && <>
+            <SectionLabel label={t.watchlist.forex} />
+            {forexPairs.map((item) => (
+              <AssetRow
+                key={item.symbol} symbol={item.symbol}
+                quote={quotes[item.symbol]} history={priceHistory[item.symbol] ?? []}
+                active={activeSymbol === item.symbol}
+                hovering={hovering === item.symbol}
+                onSelect={handleSelect}
+                onRemove={() => removeFromWatchlist(item.symbol)}
+                onHover={setHovering}
+              />
+            ))}
+          </>}
+
           {cryptos.length > 0 && <>
             <SectionLabel label={t.watchlist.crypto} />
             {cryptos.map((item) => (
@@ -193,20 +209,31 @@ function AssetRow({
     basePrice: regEntry.basePrice,
   } : null);
 
-  const isUp  = (quote?.changePct ?? 0) >= 0;
-  const price = quote?.price;
-  const pct   = quote?.changePct ?? 0;
-  const sym   = meta ? currencySymbol(meta.currency) : "$";
-  const dec   = price !== undefined && price < 10 ? 4 : 2;
+  const isUp   = (quote?.changePct ?? 0) >= 0;
+  const price  = quote?.price;
+  const pct    = quote?.changePct ?? 0;
+  const assetType = meta?.type ?? regEntry?.type ?? quote?.type;
+  const isForex   = assetType === "forex";
+
+  // Currency symbol: forex rates have no prefix — they are the rate itself
+  const sym = isForex ? "" : (meta ? currencySymbol(meta.currency) : "$");
+  // Decimal places: forex needs 4 dp (6 for very small rates like JPYCNY, KRWCNY)
+  const dec = isForex
+    ? (price !== undefined && price < 0.01 ? 6 : 4)
+    : (price !== undefined && price < 10 ? 4 : 2);
 
   // Chinese name: check watchlist item's nameCN, then registry, then ASSET_META
   const displayName = lang === "zh"
     ? (regEntry?.nameCN ?? meta?.nameCN ?? meta?.name ?? symbol)
     : (meta?.name ?? regEntry?.name ?? symbol);
 
-  const ticker = symbol.replace("USDT","").replace(/^(HK|CN)/,"");
+  // Ticker label: forex shows "USD/CNY"; crypto strips "USDT"; HK/CN strips prefix
+  const ticker = isForex
+    ? symbol.slice(0, 3) + "/" + symbol.slice(3)
+    : symbol.replace("USDT","").replace(/^(HK|CN)/,"");
 
   const iconColor =
+    isForex             ? "bg-[rgba(16,185,129,0.12)] text-emerald-400"          :
     meta?.type === "crypto" ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]" :
     meta?.type === "hk"     ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"   :
     meta?.type === "cn"     ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"          :
@@ -224,15 +251,17 @@ function AssetRow({
           active ? "bg-[var(--surface-2)] border-[var(--accent)]" : "border-transparent hover:bg-[var(--surface-2)]"
         }`}
       >
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${iconColor}`}>
-          {ticker.slice(0, 2)}
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${iconColor} ${isForex ? "text-[10px] font-bold" : "text-xs font-bold"}`}>
+          {isForex ? symbol.slice(0, 3) : ticker.slice(0, 2)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-1">
             <span className="text-sm font-semibold truncate">{ticker}</span>
             {price !== undefined
               ? <span className="text-xs font-mono font-semibold shrink-0">
-                  {sym}{price < 10 ? price.toFixed(dec) : price.toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec})}
+                  {sym}{isForex || price < 10
+                    ? price.toFixed(dec)
+                    : price.toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec})}
                 </span>
               : <span className="text-xs text-[var(--muted)] animate-pulse">…</span>}
           </div>

@@ -1,4 +1,4 @@
-export type AssetType = "stock" | "crypto" | "hk" | "cn";
+export type AssetType = "stock" | "crypto" | "hk" | "cn" | "forex";
 
 export interface Quote {
   symbol: string;
