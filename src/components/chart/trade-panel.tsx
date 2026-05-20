@@ -16,13 +16,13 @@
  *    position (sell) — shows inline error BEFORE the server rejects
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTradingStore } from "@/lib/store";
 import { useT } from "@/lib/hooks/use-t";
 import { ASSET_META, currencySymbol } from "@/lib/mock";
 import { getAsset } from "@/lib/asset-registry";
 import { Card } from "@/components/ui/card";
-import type { TradeOrder, PortfolioSummary } from "@/lib/types";
+import type { TradeOrder } from "@/lib/types";
 import { Info, ChevronDown, ChevronUp, Zap, Wallet, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +57,8 @@ function qtyDp(isForex: boolean, isCrypto: boolean): number {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function TradePanel({ symbol }: TradePanelProps) {
-  const { quotes, tradeMode, setTradeMode, addNotification, settings } = useTradingStore();
+  const { quotes, tradeMode, setTradeMode, addNotification, settings,
+          portfolio, portfolioLoading, fetchPortfolio } = useTradingStore();
   const t = useT();
 
   // ── Asset metadata ─────────────────────────────────────────────────────
@@ -90,21 +91,11 @@ export function TradePanel({ symbol }: TradePanelProps) {
   const step = qtyStep(isForex, isCrypto);
   const dp   = qtyDp(isForex, isCrypto);
 
-  // ── Portfolio state ────────────────────────────────────────────────────
-  const [portfolio, setPortfolio]           = useState<PortfolioSummary | null>(null);
-  const [loadingPortfolio, setLoadingPortfolio] = useState(false);
+  // ── Portfolio state — shared from store, updated after every trade ────
+  // Initial fetch on first mount (store is shared so only actually runs once)
+  useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
 
-  const fetchPortfolio = useCallback(async () => {
-    setLoadingPortfolio(true);
-    try {
-      const res = await fetch("/api/portfolio", { cache: "no-store" });
-      if (res.ok) setPortfolio(await res.json());
-    } catch { /* non-fatal */ }
-    finally { setLoadingPortfolio(false); }
-  }, []);
-
-  useEffect(() => { fetchPortfolio(); }, [fetchPortfolio, symbol]);
-
+  const loadingPortfolio = portfolioLoading;
   const cash        = portfolio?.cash ?? 0;
   const positionQty = portfolio?.positions.find((p) => p.symbol === symbol)?.qty ?? 0;
   const avgEntry    = portfolio?.positions.find((p) => p.symbol === symbol)?.avgEntryPrice;

@@ -1,30 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { PortfolioSummary } from "@/lib/types";
+import { useEffect } from "react";
+import { useTradingStore } from "@/lib/store";
 
+/**
+ * Reads the shared portfolio from the Zustand store and keeps it fresh.
+ * Any component can call usePortfolio() — they all read the same state.
+ * When TradePanel calls fetchPortfolio() after a trade, every consumer
+ * (dashboard, portfolio page, trade panel) updates instantly.
+ */
 export function usePortfolio() {
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
+  const portfolio        = useTradingStore((s) => s.portfolio);
+  const portfolioLoading = useTradingStore((s) => s.portfolioLoading);
+  const fetchPortfolio   = useTradingStore((s) => s.fetchPortfolio);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res  = await fetch("/api/portfolio");
-        const data = await res.json() as PortfolioSummary;
-        setPortfolio(data);
-      } catch (e) {
-        setError(String(e));
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-    const id = setInterval(load, 30_000); // refresh every 30s
+    // Initial load + periodic refresh every 30 s
+    fetchPortfolio();
+    const id = setInterval(fetchPortfolio, 30_000);
     return () => clearInterval(id);
+  // fetchPortfolio is a stable Zustand action — safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { portfolio, loading, error };
+  return { portfolio, loading: portfolioLoading, error: null, refetch: fetchPortfolio };
 }

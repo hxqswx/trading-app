@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   Quote, OrderBook, AIAnalysis, WatchlistItem,
-  AppNotification, UserSettings,
+  AppNotification, UserSettings, PortfolioSummary,
 } from "./types";
 import type { Lang } from "./i18n";
 
@@ -67,6 +67,11 @@ interface TradingStore {
   aiAnalysis: Record<string, AIAnalysis>;
   setAIAnalysis: (a: AIAnalysis) => void;
 
+  // ── Portfolio (shared, refreshed after every trade) ─────────────────────
+  portfolio: PortfolioSummary | null;
+  portfolioLoading: boolean;
+  fetchPortfolio: () => Promise<void>;
+
   // ── Watchlist ─────────────────────────────────────────────────────────────
   watchlist: WatchlistItem[];
   addToWatchlist:      (item: WatchlistItem) => void;
@@ -126,6 +131,18 @@ export const useTradingStore = create<TradingStore>()(
       aiAnalysis: {},
       setAIAnalysis: (a) => set((s) => ({ aiAnalysis: { ...s.aiAnalysis, [a.symbol]: a } })),
 
+      // ── Portfolio ─────────────────────────────────────────────────────
+      portfolio: null,
+      portfolioLoading: false,
+      fetchPortfolio: async () => {
+        set({ portfolioLoading: true });
+        try {
+          const res = await fetch("/api/portfolio", { cache: "no-store" });
+          if (res.ok) set({ portfolio: await res.json() as PortfolioSummary });
+        } catch { /* non-fatal */ }
+        finally { set({ portfolioLoading: false }); }
+      },
+
       // ── Watchlist ──────────────────────────────────────────────────────
       watchlist: DEFAULT_WATCHLIST,
 
@@ -183,7 +200,7 @@ export const useTradingStore = create<TradingStore>()(
     }),
     {
       name: "tradeai-store-v2",
-      // Only persist user preferences — market data regenerates on load
+      // Only persist user preferences — market data and portfolio regenerate on load
       partialize: (state) => ({
         watchlist: state.watchlist,
         lang:      state.lang,
