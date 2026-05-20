@@ -9,6 +9,7 @@
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { DDL, DEFAULT_CASH } from "@/lib/db/schema";
 import { getQuotes } from "@/lib/market-data";
 import { MOCK_PORTFOLIO, ASSET_META } from "@/lib/mock";
 import type { PortfolioSummary, Position } from "@/lib/types";
@@ -25,8 +26,20 @@ export async function GET() {
 
   // ── DB mode ───────────────────────────────────────────────────────────────
   try {
-    // Make sure tables exist
-    await sql`SELECT 1 FROM positions LIMIT 1`;
+    // Auto-init tables on first use
+    try {
+      await sql`SELECT 1 FROM positions LIMIT 1`;
+    } catch {
+      await sql.query(DDL);
+      await sql`INSERT INTO settings (key, value) VALUES ('cash', ${String(DEFAULT_CASH)}) ON CONFLICT (key) DO NOTHING`;
+      for (const pos of MOCK_PORTFOLIO.positions) {
+        await sql`
+          INSERT INTO positions (symbol, qty, avg_entry_price, asset_type, currency)
+          VALUES (${pos.symbol}, ${pos.qty}, ${pos.avgEntryPrice}, ${pos.type}, ${pos.currency ?? "USD"})
+          ON CONFLICT (symbol) DO NOTHING
+        `;
+      }
+    }
 
     // Fetch positions
     const rows = await sql`

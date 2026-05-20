@@ -15,8 +15,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { TradeOrder } from "@/lib/types";
 import { getDb } from "@/lib/db";
+import { DDL, DEFAULT_CASH } from "@/lib/db/schema";
 import { getQuote } from "@/lib/market-data";
-import { ASSET_META } from "@/lib/mock";
+import { ASSET_META, MOCK_PORTFOLIO } from "@/lib/mock";
 import { getAsset } from "@/lib/asset-registry";
 
 export const runtime = "nodejs";
@@ -58,14 +59,36 @@ export async function POST(req: NextRequest) {
 
     // ── DB path ───────────────────────────────────────────────────────────────
     if (sql) {
-      // Check tables exist
+      // Auto-init tables on first use — no manual /api/init needed
       try {
         await sql`SELECT 1 FROM orders LIMIT 1`;
       } catch {
-        return NextResponse.json(
-          { error: "Database tables not initialised. Call POST /api/init first." },
-          { status: 409 }
-        );
+        try {
+          await sql.query(DDL);
+          // Seed default cash
+          await sql`
+            INSERT INTO settings (key, value)
+            VALUES ('cash', ${String(DEFAULT_CASH)})
+            ON CONFLICT (key) DO NOTHING
+          `;
+          // Seed mock positions so the user starts with a sample portfolio
+          for (const pos of MOCK_PORTFOLIO.positions) {
+            await sql`
+              INSERT INTO positions (symbol, qty, avg_entry_price, asset_type, currency)
+              VALUES (${pos.symbol}, ${pos.qty}, ${pos.avgEntryPrice}, ${pos.type}, ${pos.currency ?? "USD"})
+              ON CONFLICT (symbol) DO NOTHING
+            `;
+          }
+        } catch (initErr) {
+          console.error("[/api/order] auto-init failed — falling back to mock mode:", initErr);
+          // DB unreachable: return a simulated fill so the UI isn't broken
+          return NextResponse.json({
+            id: `ord-${Date.now()}`, symbol: order.symbol, side: order.side,
+            type: order.type, qty: order.qty, status: "filled",
+            filled_qty: order.qty, fill_price: fillPrice, total_cost: totalCost,
+            currency: meta.currency, created_at: new Date().toISOString(), db_mode: false,
+          });
+        }
       }
 
       // Fetch current cash
