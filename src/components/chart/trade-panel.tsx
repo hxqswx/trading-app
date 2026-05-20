@@ -215,7 +215,7 @@ export function TradePanel({ symbol }: TradePanelProps) {
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <Card className="p-0 overflow-hidden flex flex-col">
+    <Card className="p-0 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">

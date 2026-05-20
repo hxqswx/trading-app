@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTradingStore } from "@/lib/store";
 import { useT } from "@/lib/hooks/use-t";
 import { PriceChart } from "@/components/chart/price-chart";
@@ -27,6 +27,32 @@ export function TradeView({ symbol }: TradeViewProps) {
   const [tab,     setTab]     = useState<MobileTab>("chart");
   const [leftTab, setLeftTab] = useState<LeftTab>("watchlist");
 
+  // ── Resizable panels ─────────────────────────────────────────────────────
+  const [leftWidth,  setLeftWidth]  = useState(256); // px — matches w-64
+  const [rightWidth, setRightWidth] = useState(288); // px — matches w-72
+  const resizing = useRef<{ side: "left" | "right"; startX: number; startW: number } | null>(null);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!resizing.current) return;
+      const { side, startX, startW } = resizing.current;
+      const dx = e.clientX - startX;
+      if (side === "left")  setLeftWidth (Math.max(180, Math.min(420, startW + dx)));
+      else                  setRightWidth(Math.max(220, Math.min(520, startW - dx)));
+    }
+    function onUp() { resizing.current = null; document.body.style.cursor = ""; document.body.style.userSelect = ""; }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup",   onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  function startResize(side: "left" | "right", e: React.MouseEvent) {
+    e.preventDefault();
+    resizing.current = { side, startX: e.clientX, startW: side === "left" ? leftWidth : rightWidth };
+    document.body.style.cursor     = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
   useEffect(() => { setActiveSymbol(symbol); }, [symbol, setActiveSymbol]);
 
   const TABS: { id: MobileTab; icon: React.ReactNode; label: string }[] = [
@@ -41,7 +67,10 @@ export function TradeView({ symbol }: TradeViewProps) {
     <div className="flex h-full min-h-0">
 
       {/* ── Desktop: left sidebar with Watchlist / FX tabs ──────────────── */}
-      <aside className="w-64 border-r border-[var(--border)] shrink-0 hidden xl:flex flex-col overflow-hidden">
+      <aside
+        style={{ width: leftWidth }}
+        className="border-r border-[var(--border)] shrink-0 hidden xl:flex flex-col overflow-hidden"
+      >
         {/* Tab switcher */}
         <div className="flex border-b border-[var(--border)] shrink-0">
           {([
@@ -69,6 +98,13 @@ export function TradeView({ symbol }: TradeViewProps) {
           {leftTab === "watchlist" ? <Watchlist /> : <ForexPanel />}
         </div>
       </aside>
+
+      {/* ── Left resize handle ───────────────────────────────────────────── */}
+      <div
+        onMouseDown={(e) => startResize("left", e)}
+        className="hidden xl:block w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-[var(--accent)]/40 active:bg-[var(--accent)]/60 transition-colors"
+        title="Drag to resize"
+      />
 
       {/* ── Center column ──────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -147,18 +183,28 @@ export function TradeView({ symbol }: TradeViewProps) {
         </div>
       </div>
 
+      {/* ── Right resize handle ─────────────────────────────────────────── */}
+      <div
+        onMouseDown={(e) => startResize("right", e)}
+        className="hidden md:block w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-[var(--accent)]/40 active:bg-[var(--accent)]/60 transition-colors"
+        title="Drag to resize"
+      />
+
       {/* ── Right: trade + AI/Strategy — desktop only ───────────────────── */}
-      <RightPanel symbol={symbol} t={t} />
+      <RightPanel symbol={symbol} t={t} width={rightWidth} />
 
     </div>
   );
 }
 
 // ── Desktop right panel with AI / Strategy tab switcher ──────────────────
-function RightPanel({ symbol, t }: { symbol: string; t: ReturnType<typeof useT> }) {
+function RightPanel({ symbol, t, width }: { symbol: string; t: ReturnType<typeof useT>; width: number }) {
   const [rightTab, setRightTab] = useState<"ai" | "strategy">("ai");
   return (
-    <aside className="w-72 border-l border-[var(--border)] shrink-0 hidden md:flex flex-col overflow-hidden">
+    <aside
+      style={{ width }}
+      className="border-l border-[var(--border)] shrink-0 hidden md:flex flex-col overflow-hidden"
+    >
       {/* Tab switcher */}
       <div className="flex border-b border-[var(--border)] shrink-0">
         {[

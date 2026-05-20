@@ -25,9 +25,7 @@ export function Watchlist() {
     router.push(`/trade/${symbol}`);
   }
 
-  // Forex has its own tab — exclude from watchlist entirely
-  const nonForex = watchlist.filter((w) => w.type !== "forex");
-  const filtered = nonForex.filter((w) => {
+  const filtered = watchlist.filter((w) => {
     if (!query) return true;
     const ql = query.toLowerCase();
     const meta = ASSET_META[w.symbol] ?? getAsset(w.symbol);
@@ -40,11 +38,11 @@ export function Watchlist() {
     );
   });
 
-  // Forex has its own dedicated tab — exclude from watchlist display
   const cryptos  = filtered.filter((w) => w.type === "crypto");
   const stocks   = filtered.filter((w) => w.type === "stock");
   const hkStocks = filtered.filter((w) => w.type === "hk");
   const cnStocks = filtered.filter((w) => w.type === "cn");
+  const fxItems  = filtered.filter((w) => w.type === "forex");
 
   return (
     <>
@@ -55,7 +53,7 @@ export function Watchlist() {
             <h2 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">
               {t.watchlist.title}
               <span className="ml-1.5 text-[var(--muted)]/60">
-                ({watchlist.filter((w) => w.type !== "forex").length})
+                ({watchlist.length})
               </span>
             </h2>
             <div className="flex items-center gap-1">
@@ -143,6 +141,21 @@ export function Watchlist() {
           {hkStocks.length > 0 && <>
             <SectionLabel label={t.watchlist.cnHk} />
             {hkStocks.map((item) => (
+              <AssetRow
+                key={item.symbol} symbol={item.symbol}
+                quote={quotes[item.symbol]} history={priceHistory[item.symbol] ?? []}
+                active={activeSymbol === item.symbol}
+                hovering={hovering === item.symbol}
+                onSelect={handleSelect}
+                onRemove={() => removeFromWatchlist(item.symbol)}
+                onHover={setHovering}
+              />
+            ))}
+          </>}
+
+          {fxItems.length > 0 && <>
+            <SectionLabel label={t.watchlist.forex} />
+            {fxItems.map((item) => (
               <AssetRow
                 key={item.symbol} symbol={item.symbol}
                 quote={quotes[item.symbol]} history={priceHistory[item.symbol] ?? []}
