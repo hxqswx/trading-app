@@ -30,6 +30,8 @@ export interface Translations {
     stop: string; stopDesc: string;
     stopLimit: string; stopLimitDesc: string;
     youllOwn: string; youllSell: string;
+    available: string; position: string; noPosition: string; sellAll: string;
+    insufficientFunds: string; insufficientPosition: string;
   };
   orderbook: {
     title: string; spread: string;
@@ -166,6 +168,8 @@ const en: Translations = {
     stop: "Stop", stopDesc: "Trigger a market order when price hits your stop",
     stopLimit: "Stop-Limit", stopLimitDesc: "Trigger a limit order when price hits your stop",
     youllOwn: "You'll own", youllSell: "You'll sell",
+    available: "Available", position: "Position", noPosition: "No position", sellAll: "Sell All",
+    insufficientFunds: "Insufficient funds", insufficientPosition: "Insufficient position",
   },
   orderbook: { title: "Order Book", spread: "Spread", price: "Price", size: "Size", total: "Total" },
   ai: {
@@ -303,6 +307,8 @@ const zh: Translations = {
     stop: "止损单", stopDesc: "当价格触及止损价时触发市价单",
     stopLimit: "止损限价单", stopLimitDesc: "当价格触及止损价时触发限价单",
     youllOwn: "将持有", youllSell: "将卖出",
+    available: "可用资金", position: "持仓", noPosition: "暂无持仓", sellAll: "清仓",
+    insufficientFunds: "资金不足", insufficientPosition: "持仓不足",
   },
   orderbook: { title: "盘口", spread: "价差", price: "价格", size: "数量", total: "累计" },
   ai: {

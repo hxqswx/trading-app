@@ -193,15 +193,20 @@ function RangeBar({ symbol }: { symbol: string }) {
   const q = quotes[symbol];
   if (!q) return null;
 
-  const meta  = ASSET_META[symbol];
-  const sym   = currencySymbol(meta?.currency ?? "USD");
-  const range = q.high - q.low;
-  const pos   = range > 0 ? ((q.price - q.low) / range) * 100 : 50;
-  const dec   = q.price < 10 ? 4 : 2;
-  const fmt   = (n: number) =>
+  const meta    = ASSET_META[symbol];
+  const isForex = q.type === "forex";
+  // Forex rates display without currency prefix; use more decimal places for small rates
+  const sym     = isForex ? "" : currencySymbol(meta?.currency ?? "USD");
+  const dec     = isForex
+    ? (q.price < 0.01 ? 6 : 4)
+    : (q.price < 10 ? 4 : 2);
+  const range   = q.high - q.low;
+  const pos     = range > 0 ? ((q.price - q.low) / range) * 100 : 50;
+  const fmt     = (n: number) =>
     `${sym}${n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
 
   const typeLabel =
+    isForex          ? t.badge.forex  :
     q.type === "crypto" ? t.badge.crypto :
     q.type === "hk"     ? t.badge.hk     :
     q.type === "cn"     ? t.badge.cn      : t.badge.stock;
@@ -220,9 +225,13 @@ function RangeBar({ symbol }: { symbol: string }) {
       <div className="flex items-center gap-4 text-xs text-[var(--muted)]">
         <span>{t.chart.range24h}</span>
         <span className="text-[var(--foreground)]">{typeLabel}</span>
-        <span>{t.chart.vol}: <span className="font-mono text-[var(--foreground)]">
-          {q.volume >= 1e9 ? `${(q.volume/1e9).toFixed(1)}B` : q.volume >= 1e6 ? `${(q.volume/1e6).toFixed(1)}M` : q.volume.toFixed(0)}
-        </span></span>
+        {isForex ? (
+          <span className="font-mono text-[var(--foreground)]/40">—</span>
+        ) : (
+          <span>{t.chart.vol}: <span className="font-mono text-[var(--foreground)]">
+            {q.volume >= 1e9 ? `${(q.volume/1e9).toFixed(1)}B` : q.volume >= 1e6 ? `${(q.volume/1e6).toFixed(1)}M` : q.volume.toFixed(0)}
+          </span></span>
+        )}
       </div>
     </div>
   );
@@ -234,22 +243,30 @@ function AssetInfo({ symbol }: { symbol: string }) {
   const meta = ASSET_META[symbol];
   if (!meta) return null;
 
-  const ticker = symbol.replace("USDT","").replace(/^(HK|CN)/,"");
+  const isForex = meta.type === "forex";
+  // Forex: "USD/CNY"; Crypto: "BTC"; HK: "0700"; CN: "MTAI"; US: "AAPL"
+  const ticker  = isForex
+    ? symbol.slice(0, 3) + "/" + symbol.slice(3)
+    : symbol.replace("USDT","").replace(/^(HK|CN)/,"");
+  // Icon label: forex shows base currency (3 chars), others show first 2 chars
+  const iconLabel = isForex ? symbol.slice(0, 3) : ticker.slice(0, 2);
+
   const name   = lang === "zh" && meta.nameCN ? meta.nameCN : meta.name;
   const desc   = lang === "zh" && meta.descriptionCN ? meta.descriptionCN : meta.description;
   const sector = lang === "zh" && meta.sectorCN ? meta.sectorCN : meta.sector;
 
   const iconClass =
-    meta.type === "crypto" ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]"
-    : meta.type === "hk"  ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"
-    : meta.type === "cn"  ? "bg-[rgba(248,81,73,0.12)] text-[#ff6b6b]"
+    isForex            ? "bg-emerald-500/15 text-emerald-400"
+    : meta.type === "crypto" ? "bg-[rgba(188,140,255,0.12)] text-[var(--purple)]"
+    : meta.type === "hk"    ? "bg-[rgba(255,160,0,0.12)] text-[var(--yellow)]"
+    : meta.type === "cn"    ? "bg-[rgba(248,81,73,0.12)] text-[#ff6b6b]"
     : "bg-[rgba(88,166,255,0.12)] text-[var(--accent)]";
 
   return (
     <div className="mx-3 md:mx-4 mt-3 mb-4 px-3 md:px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
       <div className="flex items-start gap-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 mt-0.5 ${iconClass}`}>
-          {ticker.slice(0,2)}
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${iconClass}`}>
+          {iconLabel}
         </div>
         <div className="min-w-0">
           <div className="font-semibold text-sm">

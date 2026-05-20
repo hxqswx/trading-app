@@ -17,6 +17,7 @@ import type { TradeOrder } from "@/lib/types";
 import { getDb } from "@/lib/db";
 import { getQuote } from "@/lib/market-data";
 import { ASSET_META } from "@/lib/mock";
+import { getAsset } from "@/lib/asset-registry";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,9 @@ export async function POST(req: NextRequest) {
     if (order.qty <= 0) {
       return NextResponse.json({ error: "qty must be positive" }, { status: 400 });
     }
-    if (!(order.symbol in ASSET_META)) {
+    // Accept symbols from ASSET_META (mock) OR from the asset registry (forex, etc.)
+    const regEntry = getAsset(order.symbol);
+    if (!(order.symbol in ASSET_META) && !regEntry) {
       return NextResponse.json({ error: `Unknown symbol: ${order.symbol}` }, { status: 400 });
     }
 
@@ -45,7 +48,11 @@ export async function POST(req: NextRequest) {
       : liveQuote.price;
 
     const totalCost = fillPrice * order.qty;
-    const meta      = ASSET_META[order.symbol];
+    // Use ASSET_META if available; fall back to asset registry entry
+    const meta = ASSET_META[order.symbol] ?? {
+      type:     regEntry!.type,
+      currency: regEntry!.currency,
+    };
 
     const sql = getDb();
 
