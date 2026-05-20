@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
   if (!isConfigured()) {
     const offline =
       "⚠  AI not configured.\n\n" +
-      "Add your Gemini API key to .env.local:\n" +
-      "  AI_API_KEY=your_key_here\n\n" +
-      "Get a free key at: https://aistudio.google.com → API Keys\n" +
-      "Free tier: 1,500 requests/day · no credit card required.\n\n" +
+      "Add your Groq API key to .env.local:\n" +
+      "  AI_API_KEY=gsk_your_key_here\n\n" +
+      "Get a free key at: https://console.groq.com → API Keys\n" +
+      "Free tier: 14,400 requests/day · 30 req/min · no credit card required.\n\n" +
       "Restart the dev server after adding the key.";
 
     const stream = new ReadableStream({

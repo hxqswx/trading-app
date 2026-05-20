@@ -23,15 +23,15 @@ KEY LEVELS
 
 SIGNALS
   [M] → AI_API_KEY not set in .env.local
-  [M] → Get a free Gemini API key at aistudio.google.com
+  [M] → Get a free Groq API key at console.groq.com
   [L] → Add AI_API_KEY=your_key_here to .env.local and restart
 
 RISK → MEDIUM — Unable to assess without AI connection
 
 ─────────────────────────────────────────
-TIP: Google Gemini is free — 1,500 req/day
-     aistudio.google.com → Get API Key
-     Add to .env.local: AI_API_KEY=...
+TIP: Groq is free — 14,400 req/day · 30 req/min
+     console.groq.com → API Keys → Create
+     Add to .env.local: AI_API_KEY=gsk_...
 ─────────────────────────────────────────`;
 
 export async function POST(req: NextRequest) {

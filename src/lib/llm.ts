@@ -1,24 +1,24 @@
 /**
  * llm.ts — OpenAI-compatible AI client
  *
- * Default provider: Google Gemini (free tier via OpenAI-compatible endpoint)
- *   Endpoint: https://generativelanguage.googleapis.com/v1beta/openai
- *   Free:     1,500 req/day · 15 req/min · no credit card required
- *   Key:      https://aistudio.google.com → API Keys
+ * Default provider: Groq (free tier — generous limits, fast inference)
+ *   Endpoint: https://api.groq.com/openai/v1
+ *   Free:     14,400 req/day · 30 req/min · no credit card required
+ *   Key:      https://console.groq.com → API Keys
  *
  * Works with any OpenAI-compatible provider by changing env vars:
- *   Groq:     AI_BASE_URL=https://api.groq.com/openai/v1
+ *   Gemini:   AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
  *   OpenAI:   AI_BASE_URL=https://api.openai.com/v1
  *   Ollama:   AI_BASE_URL=http://localhost:11434/v1
  *
  * Env vars (set in .env.local):
- *   AI_BASE_URL   — provider base URL (default: Gemini)
- *   AI_MODEL      — model name       (default: gemini-2.0-flash)
+ *   AI_BASE_URL   — provider base URL (default: Groq)
+ *   AI_MODEL      — model name       (default: llama-3.3-70b-versatile)
  *   AI_API_KEY    — API key          (required; leave blank for mock mode)
  */
 
-export const LLM_BASE  = (process.env.AI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai").replace(/\/$/, "");
-export const LLM_MODEL = process.env.AI_MODEL    ?? "gemini-2.0-flash";
+export const LLM_BASE  = (process.env.AI_BASE_URL ?? "https://api.groq.com/openai/v1").replace(/\/$/, "");
+export const LLM_MODEL = process.env.AI_MODEL    ?? "llama-3.3-70b-versatile";
 export const LLM_KEY   = process.env.AI_API_KEY  ?? "";
 
 /** True when an API key is configured */
@@ -99,8 +99,8 @@ export async function checkLLMStatus(): Promise<LLMStatus> {
 }
 
 function detectProvider(): string {
-  if (LLM_BASE.includes("googleapis"))    return "Google Gemini";
   if (LLM_BASE.includes("groq"))          return "Groq";
+  if (LLM_BASE.includes("googleapis"))    return "Google Gemini";
   if (LLM_BASE.includes("openai"))        return "OpenAI";
   if (LLM_BASE.includes("openrouter"))    return "OpenRouter";
   if (LLM_BASE.includes("anthropic"))     return "Anthropic";
