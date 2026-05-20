@@ -59,6 +59,7 @@ export interface Translations {
   };
   markets: {
     title: string; subtitle: string;
+    forex: string; rate: string; pair: string;
     usEquities: string; chinaHK: string; mainlandCN: string; crypto: string; cnHk: string;
     change24h: string; volume: string;
   };
@@ -190,6 +191,7 @@ const en: Translations = {
   },
   markets: {
     title: "Markets", subtitle: "Live prices across all assets",
+    forex: "FX Market", rate: "Rate", pair: "Pair",
     usEquities: "US Equities", chinaHK: "HK Stocks", mainlandCN: "A-Shares", crypto: "Crypto", cnHk: "HK Stocks",
     change24h: "24h Change", volume: "Volume",
   },
@@ -326,6 +328,7 @@ const zh: Translations = {
   },
   markets: {
     title: "市场", subtitle: "全品种实时行情",
+    forex: "外汇市场", rate: "汇率", pair: "货币对",
     usEquities: "美股", chinaHK: "港股", mainlandCN: "A股", crypto: "加密货币", cnHk: "港股",
     change24h: "24小时涨跌", volume: "成交量",
   },
