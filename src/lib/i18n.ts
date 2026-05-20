@@ -100,11 +100,11 @@ export interface Translations {
     confirmOrders: string; confirmOrdersHint: string;
     pnlDisplay: string;
     // Account
-    paperBalance: string; paperNote: string;
-    resetBalance: string; resetting: string;
-    resetSuccess: string; resetSuccessBody: string; resetWarning: string;
+    accountEquity: string; accountCash: string; accountDayPnl: string;
+    accountAlpaca: string; accountManage: string;
     // About
-    aboutMarket: string; aboutDB: string; aboutCache: string; aboutAuth: string;
+    aboutMarket: string; aboutMarketUS: string; aboutMarketCrypto: string;
+    aboutMarketOther: string; aboutDB: string; aboutAuth: string;
     viewOnGithub: string;
   };
   aiTerminal: {
@@ -236,15 +236,16 @@ const en: Translations = {
     confirmOrders: "Confirm Orders",
     confirmOrdersHint: "Show a confirmation dialog before placing each order",
     pnlDisplay: "P&L Display",
-    paperBalance: "Paper Balance",
-    paperNote: "Simulated funds — no real money involved",
-    resetBalance: "Reset Paper Account",
-    resetting: "Resetting…",
-    resetSuccess: "Account Reset",
-    resetSuccessBody: "Your paper account has been reset to $25,000.",
-    resetWarning: "This will erase all positions and order history.",
-    aboutMarket: "Market Data", aboutDB: "Database",
-    aboutCache: "Cache", aboutAuth: "Authentication",
+    accountEquity: "Total Equity",
+    accountCash: "Cash",
+    accountDayPnl: "Day P&L",
+    accountAlpaca: "Alpaca Paper Account",
+    accountManage: "Manage at Alpaca ↗",
+    aboutMarket: "Market Data",
+    aboutMarketUS: "US Stocks",
+    aboutMarketCrypto: "Crypto",
+    aboutMarketOther: "HK / CN / FX",
+    aboutDB: "Database", aboutAuth: "Authentication",
     viewOnGithub: "View on GitHub",
   },
   aiTerminal: {
@@ -376,15 +377,16 @@ const zh: Translations = {
     confirmOrders: "订单确认",
     confirmOrdersHint: "下单前显示确认对话框",
     pnlDisplay: "盈亏显示方式",
-    paperBalance: "模拟账户余额",
-    paperNote: "模拟资金 — 不涉及真实资金",
-    resetBalance: "重置模拟账户",
-    resetting: "重置中…",
-    resetSuccess: "账户已重置",
-    resetSuccessBody: "模拟账户已重置至 $25,000。",
-    resetWarning: "此操作将清除所有持仓和订单记录。",
-    aboutMarket: "市场数据", aboutDB: "数据库",
-    aboutCache: "缓存", aboutAuth: "身份验证",
+    accountEquity: "总净值",
+    accountCash: "现金",
+    accountDayPnl: "今日盈亏",
+    accountAlpaca: "Alpaca 纸交易账户",
+    accountManage: "前往 Alpaca 管理 ↗",
+    aboutMarket: "市场数据",
+    aboutMarketUS: "美股",
+    aboutMarketCrypto: "加密货币",
+    aboutMarketOther: "港股 / A股 / 外汇",
+    aboutDB: "数据库", aboutAuth: "身份验证",
     viewOnGithub: "在 GitHub 查看",
   },
   aiTerminal: {

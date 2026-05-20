@@ -106,12 +106,15 @@ export async function POST(req: NextRequest) {
             VALUES ('cash', ${String(DEFAULT_CASH)})
             ON CONFLICT (key) DO NOTHING
           `;
-          for (const pos of MOCK_PORTFOLIO.positions) {
-            await sql`
-              INSERT INTO positions (symbol, qty, avg_entry_price, asset_type, currency)
-              VALUES (${pos.symbol}, ${pos.qty}, ${pos.avgEntryPrice}, ${pos.type}, ${pos.currency ?? "USD"})
-              ON CONFLICT (symbol) DO NOTHING
-            `;
+          // Only seed mock positions in pure DB mode (no Alpaca) for demo purposes
+          if (!isAlpacaEnabled()) {
+            for (const pos of MOCK_PORTFOLIO.positions) {
+              await sql`
+                INSERT INTO positions (symbol, qty, avg_entry_price, asset_type, currency)
+                VALUES (${pos.symbol}, ${pos.qty}, ${pos.avgEntryPrice}, ${pos.type}, ${pos.currency ?? "USD"})
+                ON CONFLICT (symbol) DO NOTHING
+              `;
+            }
           }
         } catch (initErr) {
           console.error("[/api/order] auto-init failed — falling back to mock mode:", initErr);

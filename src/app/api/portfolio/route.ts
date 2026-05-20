@@ -127,19 +127,13 @@ async function getNonUsDbPositions(
   sql: NonNullable<ReturnType<typeof getDb>>
 ): Promise<Position[]> {
   try {
-    // Auto-init if needed
+    // Auto-init if needed — in Alpaca mode start with empty non-US positions
     try {
       await sql`SELECT 1 FROM positions LIMIT 1`;
     } catch {
       for (const stmt of DDL_STATEMENTS) { await sql.query(stmt); }
       await sql`INSERT INTO settings (key, value) VALUES ('cash', ${String(DEFAULT_CASH)}) ON CONFLICT (key) DO NOTHING`;
-      for (const pos of MOCK_PORTFOLIO.positions) {
-        await sql`
-          INSERT INTO positions (symbol, qty, avg_entry_price, asset_type, currency)
-          VALUES (${pos.symbol}, ${pos.qty}, ${pos.avgEntryPrice}, ${pos.type}, ${pos.currency ?? "USD"})
-          ON CONFLICT (symbol) DO NOTHING
-        `;
-      }
+      // Do NOT seed mock positions in Alpaca mode — user starts with a clean slate
     }
 
     // Only non-stock positions (crypto, hk, cn, forex)

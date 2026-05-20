@@ -9,8 +9,8 @@
  */
 import { useTradingStore } from "@/lib/store";
 import { useT } from "@/lib/hooks/use-t";
-import { X, Palette, TrendingUp, User, Info, RotateCcw, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { X, Palette, TrendingUp, User, Info, ExternalLink } from "lucide-react";
+import { cn, fmtCurrency, fmtPercent, colorClass } from "@/lib/utils";
 import { useState } from "react";
 
 type Section = "appearance" | "trading" | "account" | "about";
@@ -138,66 +138,92 @@ function TradingSection() {
 }
 
 function AccountSection() {
-  const { addNotification, closeSettings } = useTradingStore();
+  const { portfolio, portfolioLoading } = useTradingStore();
   const t = useT();
-  const [resetting, setResetting] = useState(false);
-  const [done,      setDone]      = useState(false);
 
-  async function handleReset() {
-    setResetting(true);
-    try {
-      // Try DB reset first
-      const res = await fetch("/api/init", { method: "POST" });
-      if (!res.ok) throw new Error("DB not configured");
-    } catch {
-      // Mock mode — just show success (state resets on page refresh)
-    }
-    setDone(true);
-    setResetting(false);
-    addNotification({
-      type:  "system",
-      title: t.settings.resetSuccess,
-      body:  t.settings.resetSuccessBody,
-    });
-    setTimeout(() => { setDone(false); closeSettings(); }, 1500);
-  }
+  const up = (portfolio?.dayPnl ?? 0) >= 0;
 
   return (
-    <div className="space-y-4">
-      {/* Balance display */}
+    <div className="space-y-3">
+      {/* Account header */}
+      <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">
+        {t.settings.accountAlpaca}
+      </p>
+
+      {/* Equity */}
       <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-4">
-        <p className="text-xs text-[var(--muted)]">{t.settings.paperBalance}</p>
-        <p className="text-2xl font-bold font-mono mt-1">$24,200.00</p>
-        <p className="text-xs text-[var(--muted)] mt-1">{t.settings.paperNote}</p>
+        {portfolioLoading || !portfolio ? (
+          <div className="space-y-2">
+            <div className="h-3 w-24 bg-[var(--surface)] rounded animate-pulse" />
+            <div className="h-7 w-36 bg-[var(--surface)] rounded animate-pulse" />
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-[var(--muted)] mb-1">{t.settings.accountEquity}</p>
+            <p className="text-2xl font-bold font-mono">{fmtCurrency(portfolio.equity)}</p>
+          </>
+        )}
       </div>
 
-      {/* Reset button */}
-      <button
-        onClick={handleReset}
-        disabled={resetting || done}
-        className={cn(
-          "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
-          done
-            ? "bg-[rgba(63,185,80,0.1)] text-[var(--green)] border border-[rgba(63,185,80,0.3)]"
-            : "bg-[rgba(248,81,73,0.08)] text-[var(--red)] border border-[rgba(248,81,73,0.2)] hover:bg-[rgba(248,81,73,0.15)]",
-          "disabled:opacity-60"
-        )}
-      >
-        {done
-          ? <><Check size={15} /> {t.settings.resetSuccess}</>
-          : resetting
-            ? <><RotateCcw size={15} className="animate-spin" /> {t.settings.resetting}</>
-            : <><RotateCcw size={15} /> {t.settings.resetBalance}</>
-        }
-      </button>
+      {/* Cash + Day P&L */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3">
+          <p className="text-xs text-[var(--muted)] mb-1">{t.settings.accountCash}</p>
+          {portfolioLoading || !portfolio
+            ? <div className="h-5 w-20 bg-[var(--surface)] rounded animate-pulse" />
+            : <p className="text-sm font-mono font-semibold">{fmtCurrency(portfolio.cash)}</p>}
+        </div>
+        <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3">
+          <p className="text-xs text-[var(--muted)] mb-1">{t.settings.accountDayPnl}</p>
+          {portfolioLoading || !portfolio
+            ? <div className="h-5 w-20 bg-[var(--surface)] rounded animate-pulse" />
+            : (
+              <p className={`text-sm font-mono font-semibold ${colorClass(portfolio.dayPnl)}`}>
+                {up ? "+" : ""}{fmtCurrency(portfolio.dayPnl)}
+                <span className="ml-1 text-xs opacity-70">{fmtPercent(portfolio.dayPnlPct)}</span>
+              </p>
+            )}
+        </div>
+      </div>
 
-      <p className="text-xs text-[var(--muted)] text-center">{t.settings.resetWarning}</p>
+      {/* Link to Alpaca */}
+      <a
+        href="https://app.alpaca.markets/paper/dashboard/overview"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)] transition-colors"
+      >
+        <ExternalLink size={13} />
+        {t.settings.accountManage}
+      </a>
     </div>
   );
 }
 
 function AboutSection() {
   const t = useT();
+  const alpacaOn = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "true";
+
+  const dataRows = [
+    {
+      label: `${t.settings.aboutMarket} · ${t.settings.aboutMarketUS}`,
+      value: alpacaOn ? "Alpaca Markets · IEX" : "Yahoo Finance",
+      live:  alpacaOn,
+    },
+    {
+      label: `${t.settings.aboutMarket} · ${t.settings.aboutMarketCrypto}`,
+      value: "Binance · WebSocket",
+      live:  true,
+    },
+    {
+      label: `${t.settings.aboutMarket} · ${t.settings.aboutMarketOther}`,
+      value: "Yahoo Finance · 15 min",
+      live:  false,
+    },
+    { label: t.settings.aboutDB,   value: "Neon Postgres / Mock", live: null },
+    { label: t.settings.aboutAuth, value: "NextAuth.js v5",        live: null },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -211,15 +237,14 @@ function AboutSection() {
       </div>
 
       <div className="rounded-xl border border-[var(--border)] divide-y divide-[var(--border)] overflow-hidden text-sm">
-        {[
-          { label: t.settings.aboutMarket,   value: "Yahoo Finance (free)" },
-          { label: t.settings.aboutDB,       value: "Neon Postgres / Mock" },
-          { label: t.settings.aboutCache,    value: "Upstash Redis / Memory" },
-          { label: t.settings.aboutAuth,     value: "NextAuth.js v5" },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex items-center justify-between px-4 py-2.5">
-            <span className="text-[var(--muted)]">{label}</span>
-            <span className="font-medium text-xs font-mono">{value}</span>
+        {dataRows.map(({ label, value, live }) => (
+          <div key={label} className="flex items-center justify-between px-4 py-2.5 gap-3">
+            <span className="text-[var(--muted)] text-xs">{label}</span>
+            <span className="flex items-center gap-1.5 font-medium text-xs font-mono shrink-0">
+              {live === true  && <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />}
+              {live === false && <span className="w-1.5 h-1.5 rounded-full bg-[var(--yellow)]" />}
+              {value}
+            </span>
           </div>
         ))}
       </div>
