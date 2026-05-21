@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { Platform } from "react-native";
 import { useTradingStore } from "@/lib/store";
 import { useColors } from "@/lib/hooks/use-colors";
@@ -25,6 +25,10 @@ export default function TabsLayout() {
   const colors = useColors();
   const t      = useT();
   const theme  = useTradingStore((s) => s.theme);
+  const token  = useTradingStore((s) => s.token);
+
+  // 未登录则跳到登录页
+  if (!token) return <Redirect href="/(auth)/sign-in" />;
 
   return (
     <>
