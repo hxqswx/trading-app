@@ -22,13 +22,14 @@ function DataBootstrap() {
 }
 
 export default function TabsLayout() {
-  const colors = useColors();
-  const t      = useT();
-  const theme  = useTradingStore((s) => s.theme);
-  const token  = useTradingStore((s) => s.token);
+  const colors    = useColors();
+  const t         = useT();
+  const theme     = useTradingStore((s) => s.theme);
+  const token     = useTradingStore((s) => s.token);
+  const hydrated  = useTradingStore((s) => s._hasHydrated);
 
-  // 未登录则跳到登录页
-  if (!token) return <Redirect href="/(auth)/sign-in" />;
+  // 水合完成后再判断，防止未读取 AsyncStorage 就跳走
+  if (hydrated && !token) return <Redirect href="/(auth)/sign-in" />;
 
   return (
     <>

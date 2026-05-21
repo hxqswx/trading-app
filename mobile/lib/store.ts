@@ -23,6 +23,9 @@ const DEFAULT_WATCHLIST: WatchlistItem[] = [
 ];
 
 interface TradingStore {
+  // Hydration flag
+  _hasHydrated: boolean;
+
   // Auth
   token:    string | null;
   user:     { name: string; email: string } | null;
@@ -57,6 +60,8 @@ interface TradingStore {
 export const useTradingStore = create<TradingStore>()(
   persist(
     (set) => ({
+      _hasHydrated: false,
+
       token:    null,
       user:     null,
       setAuth:  (token, user) => set({ token, user }),
@@ -102,6 +107,9 @@ export const useTradingStore = create<TradingStore>()(
         theme:     state.theme,
         watchlist: state.watchlist,
       }),
+      onRehydrateStorage: () => () => {
+        useTradingStore.setState({ _hasHydrated: true });
+      },
     }
   )
 );

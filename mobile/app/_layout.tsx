@@ -1,29 +1,11 @@
 import "react-native-gesture-handler";
-import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import React from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useTradingStore } from "@/lib/store";
 
 export default function RootLayout() {
-  const theme  = useTradingStore((s) => s.theme);
-  const [ready, setReady] = useState(
-    () => useTradingStore.persist.hasHydrated()
-  );
-
-  useEffect(() => {
-    if (ready) return;
-    const unsub = useTradingStore.persist.onFinishHydration(() => setReady(true));
-    return () => unsub();
-  }, []);
-
-  if (!ready) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#0d1117", justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color="#58a6ff" size="large" />
-      </View>
-    );
-  }
+  const theme = useTradingStore((s) => s.theme);
 
   return (
     <>
