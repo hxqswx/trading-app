@@ -7,14 +7,12 @@ import { useTradingStore } from "@/lib/store";
 
 export default function RootLayout() {
   const theme  = useTradingStore((s) => s.theme);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(
+    () => useTradingStore.persist.hasHydrated()
+  );
 
-  // 等待 AsyncStorage 水合完成再渲染，防止闪烁和导航竞争
   useEffect(() => {
-    if (useTradingStore.persist.hasHydrated()) {
-      setReady(true);
-      return;
-    }
+    if (ready) return;
     const unsub = useTradingStore.persist.onFinishHydration(() => setReady(true));
     return () => unsub();
   }, []);

@@ -11,6 +11,7 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path, Circle, Line } from "react-native-svg";
 import { useColors } from "@/lib/hooks/use-colors";
@@ -59,6 +60,7 @@ function LogoDecoration() {
 }
 
 export default function SignInScreen() {
+  const router  = useRouter();
   const colors  = useColors();
   const t       = useT();
   const lang    = useTradingStore((s) => s.lang);
@@ -79,6 +81,7 @@ export default function SignInScreen() {
     try {
       const res = await signIn({ email: email.trim(), password });
       setAuth(res.token, { name: res.user.name, email: res.user.email });
+      router.replace("/(tabs)");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Sign in failed.");
     } finally {
