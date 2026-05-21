@@ -53,14 +53,16 @@ export async function POST(req: NextRequest) {
   const { email = "", password: rawPwd = "" } = body;
   const password = rawPwd.trim();
 
-  console.log("[mobile-token] hit — email:", email, "pwd length:", password.length);
+  const pwdBytes = [...password].map(c => c.charCodeAt(0));
+  console.log("[mobile-token] hit — email:", email, "| pwd bytes:", pwdBytes);
 
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
-  // Demo mode — always works regardless of DB
-  if (password === "demo123") {
+  // Demo mode — strip ALL whitespace/punctuation auto-added by mobile keyboards
+  const pwdClean = password.replace(/[\s.,!?。，]/g, "");
+  if (pwdClean === "demo123") {
     const iat = Math.floor(Date.now() / 1000);
     const token = signToken({ sub: "demo", email, name: "Demo User", iat, exp: iat + EXPIRY });
     return NextResponse.json({ token, user: { id: "demo", email, name: "Demo User" } });
