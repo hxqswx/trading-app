@@ -50,7 +50,7 @@ export interface SignInResponse {
 }
 
 export async function signIn(payload: SignInPayload): Promise<SignInResponse> {
-  return apiFetch<SignInResponse>("/api/auth/mobile-token", {
+  return apiFetch<SignInResponse>("/api/mobile-token", {
     method: "POST",
     body:   JSON.stringify(payload),
   });
