@@ -52,7 +52,9 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
 
-  const { email = "", password = "" } = body;
+  const { email = "", password: rawPassword = "" } = body;
+  const password = rawPassword.trim(); // 去除手机键盘可能带入的空格
+  console.log("[mobile-token] email:", email, "| password bytes:", [...password].map(c => c.charCodeAt(0)));
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
