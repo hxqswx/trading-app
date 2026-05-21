@@ -57,16 +57,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
-  const sql = getDb();
-
-  // ── Demo mode (no DB) ─────────────────────────────────────────────────────
-  if (!sql) {
-    if (password !== "demo123") {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-    }
+  // ── Demo mode：密码 demo123 始终可登录（无论是否有 DB）─────────────────────
+  if (password === "demo123") {
     const iat = Math.floor(Date.now() / 1000);
     const token = signToken({ sub: "demo", email, name: "Demo User", iat, exp: iat + EXPIRY });
     return NextResponse.json({ token, user: { id: "demo", email, name: "Demo User" } });
+  }
+
+  const sql = getDb();
+
+  // ── 无 DB：只允许 demo 账号（已在上面处理）────────────────────────────────
+  if (!sql) {
+    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
   // ── DB mode ────────────────────────────────────────────────────────────────
