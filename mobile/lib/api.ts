@@ -175,8 +175,57 @@ export async function fetchAINews(symbol: string, name: string): Promise<{ items
   return apiFetch<{ items: NewsItem[] }>(`/api/ai/news?${params}`);
 }
 
+/**
+ * XHR-based SSE streaming helper.
+ * React Native / Hermes does not reliably support fetch ReadableStream,
+ * so we use XMLHttpRequest.onprogress which fires on each chunk.
+ */
+function xhrStream(
+  url: string,
+  body: string,
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) { reject(new Error("Aborted")); return; }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    let cursor = 0;
+
+    function processNew() {
+      const text  = xhr.responseText ?? "";
+      const chunk = text.slice(cursor);
+      cursor = text.length;
+      if (!chunk) return;
+
+      const lines = chunk.split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") return;
+        try {
+          const parsed = JSON.parse(payload) as { delta?: string };
+          if (parsed.delta) onChunk(parsed.delta);
+        } catch { /* partial line — skip */ }
+      }
+    }
+
+    xhr.onprogress = () => processNew();
+    xhr.onload     = () => { processNew(); resolve(); };
+    xhr.onerror    = () => reject(new Error(`Stream HTTP error: ${xhr.status}`));
+    xhr.onabort    = () => reject(new Error("Aborted"));
+
+    signal?.addEventListener("abort", () => xhr.abort());
+
+    xhr.send(body);
+  });
+}
+
 /** Streams AI terminal analysis, calling onChunk for each text delta. */
-export async function streamAnalysis(
+export function streamAnalysis(
   params: {
     symbol: string; name: string;
     price: number; changePct: number;
@@ -186,36 +235,12 @@ export async function streamAnalysis(
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-  const res = await fetch(`${baseUrl()}/api/ai/stream`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(params),
+  return xhrStream(
+    `${baseUrl()}/api/ai/stream`,
+    JSON.stringify(params),
+    onChunk,
     signal,
-  });
-
-  if (!res.ok) throw new Error(`Stream error: ${res.status}`);
-
-  // React Native 0.81 / Hermes supports ReadableStream
-  const reader  = res.body?.getReader();
-  if (!reader) throw new Error("Streaming not supported");
-
-  const decoder = new TextDecoder();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const raw   = decoder.decode(value, { stream: true });
-    const lines = raw.split("\n").filter((l) => l.startsWith("data: "));
-    for (const line of lines) {
-      const payload = line.slice(6).trim();
-      if (payload === "[DONE]") return;
-      try {
-        const parsed = JSON.parse(payload) as { delta: string };
-        if (parsed.delta) onChunk(parsed.delta);
-      } catch { /* skip */ }
-    }
-  }
+  );
 }
 
 export interface ChatMessage {
@@ -223,39 +248,16 @@ export interface ChatMessage {
   content: string;
 }
 
-export async function chatWithAI(
+export function chatWithAI(
   messages:    ChatMessage[],
   symbol:      string,
   onChunk:     (delta: string) => void,
   signal?:     AbortSignal,
 ): Promise<void> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-  const res = await fetch(`${baseUrl()}/api/ai/chat`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ messages, symbol }),
+  return xhrStream(
+    `${baseUrl()}/api/ai/chat`,
+    JSON.stringify({ messages, symbol }),
+    onChunk,
     signal,
-  });
-
-  if (!res.ok) throw new Error(`Chat error: ${res.status}`);
-
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("Streaming not supported");
-
-  const decoder = new TextDecoder();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const raw   = decoder.decode(value, { stream: true });
-    const lines = raw.split("\n").filter((l) => l.startsWith("data: "));
-    for (const line of lines) {
-      const payload = line.slice(6).trim();
-      if (payload === "[DONE]") return;
-      try {
-        const parsed = JSON.parse(payload) as { delta: string };
-        if (parsed.delta) onChunk(parsed.delta);
-      } catch { /* skip */ }
-    }
-  }
+  );
 }
