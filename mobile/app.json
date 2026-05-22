@@ -5,23 +5,28 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "scheme": "tradeai",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d1117"
+      "backgroundColor": "#080c14"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tradeai.app"
+      "bundleIdentifier": "com.tradeai.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d1117"
+        "backgroundColor": "#1e1b4b"
       },
-      "package": "com.tradeai.app"
+      "package": "com.tradeai.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6d381d44-8295-4cdd-848b-a88a5d6bf7b0"
+      },
+      "router": {}
+    },
+    "owner": "hxqs"
   }
 }

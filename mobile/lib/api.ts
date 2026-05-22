@@ -4,7 +4,6 @@
  * All requests attach the Bearer token from the store when available.
  */
 import type { Quote, PortfolioSummary, Candle, CandleInterval } from "./types";
-import { useTradingStore } from "./store";
 
 // ---------------------------------------------------------------------------
 // Base URL
@@ -21,12 +20,10 @@ async function apiFetch<T>(
   path: string,
   opts: RequestInit = {}
 ): Promise<T> {
-  const token = useTradingStore.getState().token;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(opts.headers as Record<string, string> | undefined),
   };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${baseUrl()}${path}`, { ...opts, headers });
   if (!res.ok) {
@@ -37,37 +34,11 @@ async function apiFetch<T>(
 }
 
 // ---------------------------------------------------------------------------
-// Auth
+// Quotes — GET /api/quote?symbols=A,B,C → Quote[]
 // ---------------------------------------------------------------------------
-export interface SignInPayload {
-  email:    string;
-  password: string;
-}
-
-export interface SignInResponse {
-  token: string;
-  user:  { id: string; email: string; name: string };
-}
-
-export async function signIn(payload: SignInPayload): Promise<SignInResponse> {
-  return apiFetch<SignInResponse>("/api/mobile-token", {
-    method: "POST",
-    body:   JSON.stringify(payload),
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Quotes
-// ---------------------------------------------------------------------------
-export interface QuotesResponse {
-  quotes: Quote[];
-  ts:     number;
-}
-
 export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
   const params = new URLSearchParams({ symbols: symbols.join(",") });
-  const res = await apiFetch<QuotesResponse>(`/api/quotes?${params}`);
-  return res.quotes;
+  return apiFetch<Quote[]>(`/api/quote?${params}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -78,58 +49,77 @@ export async function fetchPortfolio(): Promise<PortfolioSummary> {
 }
 
 // ---------------------------------------------------------------------------
-// Candles (chart data)
+// Candles — GET /api/candles?symbol=&interval=&limit= → Candle[]
 // ---------------------------------------------------------------------------
-export interface CandlesResponse {
-  candles:  Candle[];
-  symbol:   string;
-  interval: CandleInterval;
-}
-
 export async function fetchCandles(
   symbol: string,
-  interval: CandleInterval = "1h"
+  interval: CandleInterval = "1h",
+  limit: number = 200
 ): Promise<Candle[]> {
-  const params = new URLSearchParams({ symbol, interval });
-  const res = await apiFetch<CandlesResponse>(`/api/candles?${params}`);
-  return res.candles;
+  const params = new URLSearchParams({ symbol, interval, limit: String(limit) });
+  return apiFetch<Candle[]>(`/api/candles?${params}`);
 }
 
 // ---------------------------------------------------------------------------
-// AI Analysis
+// AI Analysis — POST /api/ai-analysis { symbol, quote, lang? } → AIAnalysis
 // ---------------------------------------------------------------------------
 export interface AiAnalysis {
-  sentiment:  "bullish" | "bearish" | "neutral";
-  riskLevel:  "low" | "medium" | "high";
-  support:    number;
-  resistance: number;
-  signals:    string[];
-  summary:    string;
-  updatedAt:  string;
+  symbol:    string;
+  sentiment: "bullish" | "bearish" | "neutral";
+  riskLevel: "low" | "medium" | "high";
+  keyLevels: { support: number; resistance: number };
+  signals:   string[];
+  summary:   string;
+  timestamp: number;
 }
 
-export async function fetchAiAnalysis(symbol: string): Promise<AiAnalysis> {
-  return apiFetch<AiAnalysis>(`/api/ai-analysis?symbol=${encodeURIComponent(symbol)}`);
+export async function fetchAiAnalysis(
+  symbol: string,
+  quote:  Quote,
+  lang:   "en" | "zh" = "zh"
+): Promise<AiAnalysis> {
+  return apiFetch<AiAnalysis>("/api/ai-analysis", {
+    method: "POST",
+    body:   JSON.stringify({ symbol, quote, lang }),
+  });
 }
 
 // ---------------------------------------------------------------------------
-// Strategies
+// Strategies — GET /api/strategies?symbol= → StrategiesResponse
 // ---------------------------------------------------------------------------
-export interface StrategySignal {
-  name:      string;
-  signal:    "strong_buy" | "buy" | "hold" | "sell" | "strong_sell";
-  value:     number;
-}
+export type Signal = "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL";
 
 export interface StrategyResult {
-  symbol:    string;
-  signals:   StrategySignal[];
-  consensus: "strong_buy" | "buy" | "hold" | "sell" | "strong_sell";
-  score:     number;
+  id:            string;
+  name:          string;
+  nameZh:        string;
+  signal:        Signal;
+  strength:      1 | 2 | 3 | 4 | 5;
+  reason:        string;
+  reasonZh:      string;
+  description:   string;
+  descriptionZh: string;
+  values:        Record<string, number | string>;
 }
 
-export async function fetchStrategies(symbol: string): Promise<StrategyResult> {
-  return apiFetch<StrategyResult>(`/api/strategies?symbol=${encodeURIComponent(symbol)}`);
+export interface ConsensusResult {
+  signal:  Signal;
+  score:   number;
+  bullish: number;
+  bearish: number;
+  neutral: number;
+}
+
+export interface StrategiesResponse {
+  symbol:      string;
+  strategies:  StrategyResult[];
+  consensus:   ConsensusResult;
+  candleCount: number;
+  timestamp:   number;
+}
+
+export async function fetchStrategies(symbol: string): Promise<StrategiesResponse> {
+  return apiFetch<StrategiesResponse>(`/api/strategies?symbol=${encodeURIComponent(symbol)}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -155,4 +145,117 @@ export async function placeOrder(payload: OrderPayload): Promise<OrderResponse> 
     method: "POST",
     body:   JSON.stringify(payload),
   });
+}
+
+// ---------------------------------------------------------------------------
+// AI Terminal
+// ---------------------------------------------------------------------------
+
+export interface LLMStatus {
+  ok:        boolean;
+  model:     string;
+  latencyMs: number;
+  provider:  string;
+}
+
+export interface NewsItem {
+  title:     string;
+  url:       string;
+  source:    string;
+  pubDate:   string;
+  sentiment: "bullish" | "bearish" | "neutral";
+}
+
+export async function checkAIStatus(): Promise<LLMStatus> {
+  return apiFetch<LLMStatus>("/api/ai/status");
+}
+
+export async function fetchAINews(symbol: string, name: string): Promise<{ items: NewsItem[] }> {
+  const params = new URLSearchParams({ symbol, name });
+  return apiFetch<{ items: NewsItem[] }>(`/api/ai/news?${params}`);
+}
+
+/** Streams AI terminal analysis, calling onChunk for each text delta. */
+export async function streamAnalysis(
+  params: {
+    symbol: string; name: string;
+    price: number; changePct: number;
+    high: number; low: number; volume: number;
+    currency: string; lang: string;
+  },
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+  const res = await fetch(`${baseUrl()}/api/ai/stream`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(params),
+    signal,
+  });
+
+  if (!res.ok) throw new Error(`Stream error: ${res.status}`);
+
+  // React Native 0.81 / Hermes supports ReadableStream
+  const reader  = res.body?.getReader();
+  if (!reader) throw new Error("Streaming not supported");
+
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const raw   = decoder.decode(value, { stream: true });
+    const lines = raw.split("\n").filter((l) => l.startsWith("data: "));
+    for (const line of lines) {
+      const payload = line.slice(6).trim();
+      if (payload === "[DONE]") return;
+      try {
+        const parsed = JSON.parse(payload) as { delta: string };
+        if (parsed.delta) onChunk(parsed.delta);
+      } catch { /* skip */ }
+    }
+  }
+}
+
+export interface ChatMessage {
+  role:    "user" | "assistant";
+  content: string;
+}
+
+export async function chatWithAI(
+  messages:    ChatMessage[],
+  symbol:      string,
+  onChunk:     (delta: string) => void,
+  signal?:     AbortSignal,
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+  const res = await fetch(`${baseUrl()}/api/ai/chat`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ messages, symbol }),
+    signal,
+  });
+
+  if (!res.ok) throw new Error(`Chat error: ${res.status}`);
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("Streaming not supported");
+
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const raw   = decoder.decode(value, { stream: true });
+    const lines = raw.split("\n").filter((l) => l.startsWith("data: "));
+    for (const line of lines) {
+      const payload = line.slice(6).trim();
+      if (payload === "[DONE]") return;
+      try {
+        const parsed = JSON.parse(payload) as { delta: string };
+        if (parsed.delta) onChunk(parsed.delta);
+      } catch { /* skip */ }
+    }
+  }
 }

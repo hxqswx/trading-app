@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useTradingStore } from "@/lib/store";
 import { searchAssets } from "@/lib/asset-registry";
 import { useT } from "@/lib/hooks/use-t";
-import type { AssetType } from "@/lib/types";
+import type { AssetType, WatchlistItem } from "@/lib/types";
 
 interface SearchResult {
   symbol:   string;
@@ -123,10 +123,23 @@ function ResultRow({
 
 // ── Main modal ────────────────────────────────────────────────────────────
 
-export function AddAssetModal({ onClose }: { onClose: () => void }) {
+export function AddAssetModal({
+  onClose,
+  overrideSymbols,
+  onAddOverride,
+  onRemoveOverride,
+}: {
+  onClose: () => void;
+  /** If provided, used for the "in list" check instead of the global watchlist */
+  overrideSymbols?: Set<string>;
+  /** If provided, called instead of addToWatchlist */
+  onAddOverride?: (item: WatchlistItem) => void;
+  /** If provided, called instead of removeFromWatchlist */
+  onRemoveOverride?: (symbol: string) => void;
+}) {
   const t = useT();
   const { watchlist, addToWatchlist, removeFromWatchlist } = useTradingStore();
-  const watchSet = new Set(watchlist.map((w) => w.symbol));
+  const watchSet = overrideSymbols ?? new Set(watchlist.map((w) => w.symbol));
 
   const [query,     setQuery]     = useState("");
   const [results,   setResults]   = useState<SearchResult[]>([]);
@@ -198,17 +211,18 @@ export function AddAssetModal({ onClose }: { onClose: () => void }) {
   }
 
   function toggle(r: SearchResult) {
+    const item: WatchlistItem = {
+      symbol:   r.symbol,
+      name:     r.name,
+      nameCN:   r.nameCN || r.name,
+      type:     r.type as AssetType,
+      yfTicker: r.yfTicker !== r.symbol ? r.yfTicker : undefined,
+      currency: r.currency as "USD" | "HKD" | "CNY",
+    };
     if (watchSet.has(r.symbol)) {
-      removeFromWatchlist(r.symbol);
+      (onRemoveOverride ?? removeFromWatchlist)(r.symbol);
     } else {
-      addToWatchlist({
-        symbol:   r.symbol,
-        name:     r.name,
-        nameCN:   r.nameCN || r.name,
-        type:     r.type as AssetType,
-        yfTicker: r.yfTicker !== r.symbol ? r.yfTicker : undefined,
-        currency: r.currency as "USD" | "HKD" | "CNY",
-      });
+      (onAddOverride ?? addToWatchlist)(item);
     }
   }
 
@@ -291,8 +305,9 @@ export function AddAssetModal({ onClose }: { onClose: () => void }) {
                           onClick={() => {
                             const found = searchAssets(sym, 1).find((a) => a.symbol === sym);
                             if (!found) return;
-                            if (inList) removeFromWatchlist(sym);
-                            else addToWatchlist({ symbol: found.symbol, name: found.name, nameCN: found.nameCN, type: found.type as AssetType });
+                            const item = { symbol: found.symbol, name: found.name, nameCN: found.nameCN, type: found.type as AssetType };
+                            if (inList) (onRemoveOverride ?? removeFromWatchlist)(sym);
+                            else (onAddOverride ?? addToWatchlist)(item);
                           }}
                           className={cn(
                             "flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors border",

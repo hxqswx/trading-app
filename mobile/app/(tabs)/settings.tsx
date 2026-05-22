@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LogOut, Globe, Moon, Sun } from "lucide-react-native";
+import { useClerk, useUser } from "@clerk/clerk-expo";
 import { useColors } from "@/lib/hooks/use-colors";
 import { useT } from "@/lib/hooks/use-t";
 import { useTradingStore } from "@/lib/store";
@@ -48,14 +49,14 @@ function SettingRow({
 }
 
 export default function SettingsScreen() {
-  const colors     = useColors();
-  const t          = useT();
-  const lang       = useTradingStore((s) => s.lang);
-  const theme      = useTradingStore((s) => s.theme);
-  const user       = useTradingStore((s) => s.user);
-  const setLang    = useTradingStore((s) => s.setLang);
-  const setTheme   = useTradingStore((s) => s.setTheme);
-  const clearAuth  = useTradingStore((s) => s.clearAuth);
+  const colors  = useColors();
+  const t       = useT();
+  const lang    = useTradingStore((s) => s.lang);
+  const theme   = useTradingStore((s) => s.theme);
+  const setLang = useTradingStore((s) => s.setLang);
+  const setTheme = useTradingStore((s) => s.setTheme);
+  const { signOut } = useClerk();
+  const { user }    = useUser();
   const { portfolio } = usePortfolio();
 
   function handleSignOut() {
@@ -67,7 +68,10 @@ export default function SettingsScreen() {
         {
           text: t.auth.signOut,
           style: "destructive",
-          onPress: clearAuth,
+          onPress: async () => {
+            await signOut();
+            // AuthGuard in _layout.tsx will redirect to /(auth)/sign-in
+          },
         },
       ]
     );
@@ -126,7 +130,9 @@ export default function SettingsScreen() {
         <Card padding={0} style={styles.card}>
           {user && (
             <SettingRow label={t.auth.profile}>
-              <Text style={[styles.valueText, { color: colors.muted }]}>{user.email}</Text>
+              <Text style={[styles.valueText, { color: colors.muted }]} numberOfLines={1}>
+                {user.primaryEmailAddress?.emailAddress ?? ""}
+              </Text>
             </SettingRow>
           )}
           <SettingRow label={t.settings.accountEquity}>

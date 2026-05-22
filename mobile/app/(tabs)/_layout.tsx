@@ -1,42 +1,38 @@
 import React from "react";
-import { Tabs, Redirect } from "expo-router";
+import { Tabs } from "expo-router";
 import { Platform } from "react-native";
 import { useTradingStore } from "@/lib/store";
 import { useColors } from "@/lib/hooks/use-colors";
 import { useT } from "@/lib/hooks/use-t";
 import { useQuotePoller } from "@/lib/hooks/use-quotes";
-import { usePortfolio } from "@/lib/hooks/use-portfolio";
 import {
   LayoutDashboard,
   LineChart,
   Briefcase,
   TrendingUp,
+  Brain,
   Settings,
 } from "lucide-react-native";
 
-/** Starts background data polling for the whole tab session. */
+/**
+ * Starts background quote polling for the whole tab session.
+ * Portfolio data is loaded lazily by each screen that needs it.
+ */
 function DataBootstrap() {
   useQuotePoller();
-  usePortfolio();
   return null;
 }
 
 export default function TabsLayout() {
-  const colors    = useColors();
-  const t         = useT();
-  const theme     = useTradingStore((s) => s.theme);
-  const token     = useTradingStore((s) => s.token);
-  const hydrated  = useTradingStore((s) => s._hasHydrated);
-
-  // 水合完成后再判断，防止未读取 AsyncStorage 就跳走
-  if (hydrated && !token) return <Redirect href="/(auth)/sign-in" />;
+  const colors = useColors();
+  const t      = useT();
 
   return (
     <>
       <DataBootstrap />
       <Tabs
         screenOptions={{
-          headerShown:        false,
+          headerShown:             false,
           tabBarActiveTintColor:   colors.accent,
           tabBarInactiveTintColor: colors.muted,
           tabBarStyle: {
@@ -57,7 +53,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title:    t.nav.dashboard,
+            title: t.nav.dashboard,
             tabBarIcon: ({ color, size }) => (
               <LayoutDashboard size={size} color={color} strokeWidth={1.8} />
             ),
@@ -66,7 +62,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="markets"
           options={{
-            title:    t.nav.markets,
+            title: t.nav.markets,
             tabBarIcon: ({ color, size }) => (
               <LineChart size={size} color={color} strokeWidth={1.8} />
             ),
@@ -75,7 +71,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="portfolio"
           options={{
-            title:    t.nav.portfolio,
+            title: t.nav.portfolio,
             tabBarIcon: ({ color, size }) => (
               <Briefcase size={size} color={color} strokeWidth={1.8} />
             ),
@@ -84,16 +80,25 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="strategies"
           options={{
-            title:    t.nav.strategies,
+            title: t.nav.strategies,
             tabBarIcon: ({ color, size }) => (
               <TrendingUp size={size} color={color} strokeWidth={1.8} />
             ),
           }}
         />
         <Tabs.Screen
+          name="ai"
+          options={{
+            title: t.nav.ai,
+            tabBarIcon: ({ color, size }) => (
+              <Brain size={size} color={color} strokeWidth={1.8} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{
-            title:    t.nav.settings,
+            title: t.nav.settings,
             tabBarIcon: ({ color, size }) => (
               <Settings size={size} color={color} strokeWidth={1.8} />
             ),

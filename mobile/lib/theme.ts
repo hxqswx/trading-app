@@ -34,4 +34,5 @@ export const light = {
 export type Colors = typeof dark;
 export type ColorScheme = "dark" | "light";
 
-export const themes: Record<ColorScheme, Colors> = { dark, light };
+// Cast needed because light uses different literal hex values than dark
+export const themes: Record<ColorScheme, Colors> = { dark, light: light as unknown as Colors };

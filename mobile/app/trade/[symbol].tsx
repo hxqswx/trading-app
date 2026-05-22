@@ -86,10 +86,14 @@ export default function TradeScreen() {
 
   // AI analysis
   async function handleAnalyse() {
+    if (!quote) {
+      Alert.alert("Error", "Quote data not available yet.");
+      return;
+    }
     setAiShown(true);
     setAiLoad(true);
     try {
-      const data = await fetchAiAnalysis(symbol);
+      const data = await fetchAiAnalysis(symbol, quote, lang);
       setAiData(data);
     } catch (e) {
       Alert.alert("Error", "AI analysis failed.");
@@ -262,13 +266,13 @@ export default function TradeScreen() {
               <View style={styles.aiRow}>
                 <Text style={[styles.aiLabel, { color: colors.muted }]}>{t.ai.support}</Text>
                 <Text style={[styles.aiValueText, { color: colors.green }]}>
-                  {quote ? fmtCurrency(aiData.support, quote.currency) : fmtCurrency(aiData.support)}
+                  {fmtCurrency(aiData.keyLevels.support, quote?.currency)}
                 </Text>
               </View>
               <View style={styles.aiRow}>
                 <Text style={[styles.aiLabel, { color: colors.muted }]}>{t.ai.resistance}</Text>
                 <Text style={[styles.aiValueText, { color: colors.red }]}>
-                  {quote ? fmtCurrency(aiData.resistance, quote.currency) : fmtCurrency(aiData.resistance)}
+                  {fmtCurrency(aiData.keyLevels.resistance, quote?.currency)}
                 </Text>
               </View>
               {aiData.signals.length > 0 && (

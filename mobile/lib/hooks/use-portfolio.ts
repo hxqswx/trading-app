@@ -1,22 +1,28 @@
 import { useEffect, useCallback, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
+import { useAuth } from "@clerk/clerk-expo";
 import { useTradingStore } from "../store";
 import { fetchPortfolio } from "../api";
 
 const POLL_INTERVAL = 30_000; // 30 s
 
 export function usePortfolio() {
-  const token           = useTradingStore((s) => s.token);
-  const portfolio       = useTradingStore((s) => s.portfolio);
-  const loading         = useTradingStore((s) => s.portfolioLoading);
-  const setPortfolio    = useTradingStore((s) => s.setPortfolio);
-  const setLoading      = useTradingStore((s) => s.setPortfolioLoading);
-  const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { isSignedIn } = useAuth();
+  const portfolio    = useTradingStore((s) => s.portfolio);
+  const loading      = useTradingStore((s) => s.portfolioLoading);
+  const setPortfolio = useTradingStore((s) => s.setPortfolio);
+  const setLoading   = useTradingStore((s) => s.setPortfolioLoading);
+  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Keep ref so load() always has the latest values WITHOUT listing them
+  // as useCallback deps — prevents load from being recreated on every fetch.
+  const portfolioRef = useRef(portfolio);
+  portfolioRef.current = portfolio;
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!isSignedIn) return;
     try {
-      if (!portfolio) setLoading(true);
+      if (!portfolioRef.current) setLoading(true);
       const data = await fetchPortfolio();
       setPortfolio(data);
     } catch (e) {
@@ -24,11 +30,11 @@ export function usePortfolio() {
     } finally {
       setLoading(false);
     }
-  }, [token, portfolio, setPortfolio, setLoading]);
+  }, [isSignedIn, setPortfolio, setLoading]);
 
-  // Load on mount / when token changes
+  // Load on mount / when auth state changes
   useEffect(() => {
-    if (!token) {
+    if (!isSignedIn) {
       setPortfolio(null);
       return;
     }
@@ -37,7 +43,7 @@ export function usePortfolio() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSignedIn, load]);
 
   // Refresh when app comes back to foreground
   useEffect(() => {

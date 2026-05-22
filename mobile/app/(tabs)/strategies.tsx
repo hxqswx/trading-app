@@ -17,26 +17,24 @@ import { useColors } from "@/lib/hooks/use-colors";
 import { useT } from "@/lib/hooks/use-t";
 import { useTradingStore } from "@/lib/store";
 import { useAllQuotes } from "@/lib/hooks/use-quotes";
-import { fetchStrategies, type StrategyResult } from "@/lib/api";
+import { fetchStrategies, type StrategiesResponse, type Signal } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fmtCurrency, fmtPercent, colorKey } from "@/lib/utils";
 
-type ConsensusKey = "strong_buy" | "buy" | "hold" | "sell" | "strong_sell";
-
-function consensusColor(c: ConsensusKey, colors: ReturnType<typeof useColors>) {
-  if (c === "strong_buy" || c === "buy")   return colors.green;
-  if (c === "strong_sell" || c === "sell") return colors.red;
+function consensusColor(c: Signal, colors: ReturnType<typeof useColors>) {
+  if (c === "STRONG_BUY" || c === "BUY")   return colors.green;
+  if (c === "STRONG_SELL" || c === "SELL") return colors.red;
   return colors.yellow;
 }
 
-function consensusLabel(c: ConsensusKey, t: ReturnType<typeof useT>): string {
-  const map: Record<ConsensusKey, string> = {
-    strong_buy:  t.strategies.strongBuy,
-    buy:         t.strategies.buy,
-    hold:        t.strategies.hold,
-    sell:        t.strategies.sell,
-    strong_sell: t.strategies.strongSell,
+function consensusLabel(c: Signal, t: ReturnType<typeof useT>): string {
+  const map: Record<Signal, string> = {
+    STRONG_BUY:  t.strategies.strongBuy,
+    BUY:         t.strategies.buy,
+    HOLD:        t.strategies.hold,
+    SELL:        t.strategies.sell,
+    STRONG_SELL: t.strategies.strongSell,
   };
   return map[c];
 }
@@ -48,7 +46,7 @@ export default function StrategiesScreen() {
   const watchlist  = useTradingStore((s) => s.watchlist);
   const lang       = useTradingStore((s) => s.lang);
 
-  const [results,   setResults]   = useState<Record<string, StrategyResult>>({});
+  const [results,   setResults]   = useState<Record<string, StrategiesResponse>>({});
   const [loading,   setLoading]   = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -56,7 +54,7 @@ export default function StrategiesScreen() {
     setLoading(true);
     const symbols = watchlist.map((w) => w.symbol).slice(0, 8);
     const settled = await Promise.allSettled(symbols.map((s) => fetchStrategies(s)));
-    const next: Record<string, StrategyResult> = {};
+    const next: Record<string, StrategiesResponse> = {};
     settled.forEach((r, i) => {
       if (r.status === "fulfilled") next[symbols[i]] = r.value;
     });
@@ -128,11 +126,13 @@ export default function StrategiesScreen() {
                 <>
                   <View style={[styles.divider, { backgroundColor: colors.border }]} />
                   <View style={styles.signalRow}>
-                    {res.signals.map((sig) => (
-                      <View key={sig.name} style={styles.signal}>
-                        <Text style={[styles.sigName, { color: colors.muted }]}>{sig.name}</Text>
-                        <Text style={[styles.sigVal, { color: consensusColor(sig.signal, colors) }]}>
-                          {consensusLabel(sig.signal, t)}
+                    {res.strategies.map((strat) => (
+                      <View key={strat.id} style={styles.signal}>
+                        <Text style={[styles.sigName, { color: colors.muted }]}>
+                          {lang === "zh" ? strat.nameZh : strat.name}
+                        </Text>
+                        <Text style={[styles.sigVal, { color: consensusColor(strat.signal, colors) }]}>
+                          {consensusLabel(strat.signal, t)}
                         </Text>
                       </View>
                     ))}
@@ -141,8 +141,8 @@ export default function StrategiesScreen() {
                     <Text style={[styles.consensusLabel, { color: colors.muted }]}>
                       {t.strategies.consensus}
                     </Text>
-                    <Text style={[styles.consensusVal, { color: consensusColor(res.consensus, colors) }]}>
-                      {consensusLabel(res.consensus, t)}
+                    <Text style={[styles.consensusVal, { color: consensusColor(res.consensus.signal, colors) }]}>
+                      {consensusLabel(res.consensus.signal, t)}
                     </Text>
                   </View>
                 </>

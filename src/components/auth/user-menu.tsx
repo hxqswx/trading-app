@@ -6,11 +6,11 @@
  * - Avatar: photo from OAuth or colour-coded initials circle.
  * - Dropdown: user info, Settings, Sign out.
  * - Profile/Settings opens the Zustand settings panel (gear icon).
- * - Sign out calls NextAuth signOut with a redirect back to /sign-in.
+ * - Sign out calls Clerk's signOut then navigates to /sign-in.
  */
-import { useSession, signOut } from "next-auth/react";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { useState, useRef, useEffect } from "react";
-import { LogOut, Settings, ChevronDown, Sparkles } from "lucide-react";
+import { LogOut, Settings, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTradingStore } from "@/lib/store";
 
@@ -59,8 +59,9 @@ function Avatar({ src, name, email, size = 28 }: { src?: string | null; name?: s
 
 // ── UserMenu ──────────────────────────────────────────────────────────────
 export function UserMenu() {
-  const { data: session, status } = useSession();
-  const { openSettings }          = useTradingStore();
+  const { user, isLoaded } = useUser();
+  const { signOut }        = useClerk();
+  const { openSettings }   = useTradingStore();
   const [open,    setOpen]    = useState(false);
   const [signing, setSigning] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -82,25 +83,23 @@ export function UserMenu() {
   }, []);
 
   // ── Loading skeleton ──────────────────────────────────────────────────
-  if (status === "loading") {
+  if (!isLoaded) {
     return <div className="w-7 h-7 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />;
   }
-  if (status === "unauthenticated") return null;
+  if (!user) return null;
 
-  const user       = session?.user;
-  const isDemo     = user?.id?.startsWith("demo-") ?? false;
-  const displayName = user?.name ?? user?.email?.split("@")[0] ?? "Trader";
+  const displayName = user.fullName ?? user.primaryEmailAddress?.emailAddress?.split("@")[0] ?? "Trader";
+  const email       = user.primaryEmailAddress?.emailAddress;
+  const avatar      = user.imageUrl;
 
   async function handleSignOut() {
     setSigning(true);
     setOpen(false);
     try {
-      // NextAuth v5: signOut clears the session cookie then navigates
-      await signOut({ redirect: false });
+      await signOut();
     } catch {
-      // Ignore errors from the navigation itself
+      // Ignore errors
     } finally {
-      // Hard navigate so the proxy re-evaluates auth and shows sign-in
       window.location.href = "/sign-in";
     }
   }
@@ -114,7 +113,7 @@ export function UserMenu() {
         aria-label="User menu"
         aria-expanded={open}
       >
-        <Avatar src={user?.image} name={user?.name} email={user?.email} size={28} />
+        <Avatar src={avatar} name={displayName} email={email} size={28} />
         <span className="hidden sm:block text-xs font-medium max-w-[100px] truncate">
           {displayName}
         </span>
@@ -131,18 +130,12 @@ export function UserMenu() {
           {/* User info */}
           <div className="px-4 py-3.5 border-b border-[var(--border)]">
             <div className="flex items-center gap-3">
-              <Avatar src={user?.image} name={user?.name} email={user?.email} size={36} />
+              <Avatar src={avatar} name={displayName} email={email} size={36} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate">{displayName}</p>
-                <p className="text-[11px] text-[var(--muted)] truncate">{user?.email}</p>
+                <p className="text-[11px] text-[var(--muted)] truncate">{email}</p>
               </div>
             </div>
-            {isDemo && (
-              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[var(--accent)] bg-[rgba(88,166,255,0.08)] border border-[rgba(88,166,255,0.2)] rounded-lg px-2.5 py-1.5">
-                <Sparkles size={11} className="shrink-0" />
-                Demo account · data resets on refresh
-              </div>
-            )}
           </div>
 
           {/* Menu items */}

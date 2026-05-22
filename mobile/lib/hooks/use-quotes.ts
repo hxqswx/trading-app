@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { useTradingStore } from "../store";
 import { fetchQuotes } from "../api";
@@ -7,23 +7,36 @@ const POLL_INTERVAL = 15_000; // 15 s
 
 /**
  * Polls quotes for the current watchlist and pushes them into the store.
- * Call once at the app root (e.g. in the tabs layout).
+ * Call once at the app root (e.g. in the tabs layout DataBootstrap).
  */
 export function useQuotePoller() {
   const watchlist    = useTradingStore((s) => s.watchlist);
+  const marketLists  = useTradingStore((s) => s.marketLists);
   const updateQuotes = useTradingStore((s) => s.updateQuotes);
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Merge watchlist + all market list symbols, deduped.
+  const allSymbols = useMemo(() => {
+    const set = new Set<string>();
+    watchlist.forEach((w) => set.add(w.symbol));
+    Object.values(marketLists).forEach((list) =>
+      list.forEach((w) => set.add(w.symbol))
+    );
+    return Array.from(set);
+  }, [watchlist, marketLists]);
+
+  const symbolsRef = useRef(allSymbols);
+  symbolsRef.current = allSymbols;
+
   const poll = useCallback(async () => {
-    if (watchlist.length === 0) return;
+    if (symbolsRef.current.length === 0) return;
     try {
-      const symbols = watchlist.map((w) => w.symbol);
-      const quotes  = await fetchQuotes(symbols);
+      const quotes = await fetchQuotes(symbolsRef.current);
       updateQuotes(quotes);
     } catch (e) {
       console.warn("useQuotePoller error:", e);
     }
-  }, [watchlist, updateQuotes]);
+  }, [updateQuotes]); // updateQuotes is a stable store function reference
 
   useEffect(() => {
     poll();
@@ -46,7 +59,13 @@ export function useQuote(symbol: string) {
   return useTradingStore((s) => s.quotes[symbol] ?? null);
 }
 
-/** Returns all quotes as an array. */
+/**
+ * Returns all quotes as a stable array.
+ * Uses useMemo so a new array is NOT created on every render —
+ * this prevents the useSyncExternalStore infinite-loop bug in Zustand v5.
+ */
 export function useAllQuotes() {
-  return useTradingStore((s) => Object.values(s.quotes));
+  // s.quotes is a stable object reference; only changes when updateQuotes() fires.
+  const quotes = useTradingStore((s) => s.quotes);
+  return useMemo(() => Object.values(quotes), [quotes]);
 }

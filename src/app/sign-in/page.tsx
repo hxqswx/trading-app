@@ -13,9 +13,11 @@
  *   • Self-drawing SVG price-chart with gradient area fill
  *   • Floating stat cards & feature badges
  *   • Glassmorphism auth card with Sign In / Register tabs
+ *
+ * Auth: Clerk email/password via useSignIn / useSignUp hooks.
  */
-import { useState, useTransition, useEffect, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect, Suspense } from "react";
+import { useSignIn, useSignUp } from "@clerk/nextjs/legacy";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2,
@@ -24,29 +26,6 @@ import {
 import { cn } from "@/lib/utils";
 
 // ═══════════════════════════════════════════════════════════ VISUAL ATOMS ══
-
-/** Google OAuth icon */
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" aria-hidden>
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-    </svg>
-  );
-}
-
-/** GitHub OAuth icon */
-function GitHubIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current shrink-0" aria-hidden>
-      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
-    </svg>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════ HERO PIECES ══
 
 /** Animated logo mark with pulsing glow rings */
 function LogoMark({ size = "lg" }: { size?: "sm" | "lg" }) {
@@ -85,13 +64,11 @@ function AnimatedChart() {
     return () => clearTimeout(t);
   }, []);
 
-  // A rising line with a realistic jagged path
   const line = "M0,72 L18,62 L36,67 L54,52 L72,57 L90,40 L108,45 L126,28 L144,33 L162,18 L180,22 L198,12 L216,16 L234,6 L252,9 L270,4";
   const area = `${line} L270,90 L0,90 Z`;
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-white/6 bg-white/3 p-4">
-      {/* Top row: fake ticker */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-white">BTC / USD</span>
@@ -102,8 +79,6 @@ function AnimatedChart() {
           <p className="text-[10px] font-mono text-[#3fb950]">▲ +4.23%</p>
         </div>
       </div>
-
-      {/* Chart SVG */}
       <svg viewBox="0 0 270 90" className="w-full h-20" preserveAspectRatio="none">
         <defs>
           <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
@@ -111,9 +86,7 @@ function AnimatedChart() {
             <stop offset="100%" stopColor="#58a6ff" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Area fill */}
         <path d={area} fill="url(#areaFill)" />
-        {/* Line — draws itself via dashoffset transition */}
         <path
           d={line} fill="none" stroke="#58a6ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
           style={{
@@ -122,7 +95,6 @@ function AnimatedChart() {
             transition: drawn ? "stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)" : "none",
           }}
         />
-        {/* End dot */}
         {drawn && <circle cx="270" cy="4" r="4" fill="#58a6ff" className="drop-shadow-[0_0_6px_#58a6ff]" />}
       </svg>
     </div>
@@ -180,15 +152,12 @@ function Badge({ icon: Icon, label, color }: { icon: React.ElementType; label: s
 function Background() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-[#050a13]">
-      {/* Dot grid */}
       <div className="absolute inset-0"
         style={{
           backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }} />
-      {/* Radial vignette */}
       <div className="absolute inset-0 bg-radial-[ellipse_at_center] from-transparent via-[#050a13]/60 to-[#050a13]" />
-      {/* Orbs */}
       <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[140px] animate-orb-a"
         style={{ background: "radial-gradient(circle, rgba(88,166,255,0.12) 0%, transparent 70%)" }} />
       <div className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full blur-[120px] animate-orb-b"
@@ -265,76 +234,141 @@ function Spinner() {
   return <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />;
 }
 
+function SubmitBtn({ pending, label }: { pending: boolean; label: string }) {
+  return (
+    <button type="submit" disabled={pending}
+      className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#58a6ff] text-white hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#58a6ff]/25">
+      {pending ? <><Spinner />{label.replace("Sign", "Signing").replace("Create", "Creating")}…</> : <>{label} <ArrowRight size={14} /></>}
+    </button>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════ AUTH FORMS ══
 
 function SignInForm({ callbackUrl }: { callbackUrl: string }) {
+  const { signIn, setActive, isLoaded } = useSignIn();
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState<string | null>(null);
-  const [pending, go]           = useTransition();
-
-  const hasGH  = process.env.NEXT_PUBLIC_HAS_GITHUB === "true";
-  const hasGOO = process.env.NEXT_PUBLIC_HAS_GOOGLE === "true";
+  const [pending, setPending]   = useState(false);
 
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setError(null);
-    go(async () => {
-      const r = await signIn("credentials", { email, password, redirect: false });
-      if (r?.error) setError("Incorrect email or password. Demo: any email + demo123");
-      else window.location.href = callbackUrl;
-    });
+    e.preventDefault();
+    if (!isLoaded || pending) return;
+    setError(null);
+    setPending(true);
+    try {
+      const result = await signIn!.create({ identifier: email, password });
+      if (result.status === "complete") {
+        await setActive!({ session: result.createdSessionId });
+        window.location.href = callbackUrl;
+      } else {
+        setError("Sign-in could not be completed. Please check your credentials.");
+      }
+    } catch (err: unknown) {
+      console.error("[SignInForm]", err);
+      setError(clerkMsg(err, "Incorrect email or password."));
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {(hasGH || hasGOO) && (
-        <>
-          <div className={cn("grid gap-2", hasGH && hasGOO ? "grid-cols-2" : "grid-cols-1")}>
-            {hasGH  && <OAuthBtn icon={<GitHubIcon />} label="GitHub" onClick={() => go(async () => signIn("github",  { callbackUrl }))} disabled={pending} />}
-            {hasGOO && <OAuthBtn icon={<GoogleIcon />} label="Google" onClick={() => go(async () => signIn("google",  { callbackUrl }))} disabled={pending} />}
-          </div>
-          <Divider text="or continue with email" />
-        </>
-      )}
-      <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon={Mail} autoComplete="email" />
+      <Field label="Email" type="email" value={email} onChange={setEmail}
+        placeholder="you@example.com" icon={Mail} autoComplete="email" />
       <PwField label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
       {error && <Err msg={error} />}
       <SubmitBtn pending={pending} label="Sign in" />
-      {/* Demo hint */}
       <div className="rounded-xl border border-white/6 bg-white/3 px-4 py-3 text-[11px] text-center text-white/40">
-        <span className="font-medium text-white/60">Demo account</span> — any email ·{" "}
-        <button type="button" className="text-[#58a6ff] hover:underline font-mono"
-          onClick={() => { setEmail("demo@tradeai.app"); setPassword("demo123"); }}>
-          fill demo credentials
-        </button>
+        <span className="font-medium text-white/60">New to TradeAI?</span>{" "}
+        Use the <span className="text-[#58a6ff] font-medium">Register</span> tab to create a free account.
       </div>
     </form>
   );
 }
 
+/** Extract the human-readable message from any Clerk or JS error */
+function clerkMsg(err: unknown, fallback: string): string {
+  if (!err || typeof err !== "object") return fallback;
+  // ClerkAPIResponseError has an `errors` array
+  const errObj = err as Record<string, unknown>;
+  if (Array.isArray(errObj.errors)) {
+    const first = (errObj.errors as Array<{ longMessage?: string; message?: string }>)[0];
+    if (first) return first.longMessage ?? first.message ?? fallback;
+  }
+  // Plain Error
+  if (typeof errObj.message === "string" && errObj.message) return errObj.message;
+  return fallback;
+}
+
 function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
-  const router = useRouter();
-  const [name, setName]         = useState("");
-  const [email, setEmail]       = useState("");
-  const [pw, setPw]             = useState("");
-  const [pw2, setPw2]           = useState("");
-  const [error, setError]       = useState<string | null>(null);
-  const [done, setDone]         = useState(false);
-  const [pending, go]           = useTransition();
+  const { signUp, setActive, isLoaded } = useSignUp();
+  const [name, setName]     = useState("");
+  const [email, setEmail]   = useState("");
+  const [pw, setPw]         = useState("");
+  const [pw2, setPw2]       = useState("");
+  const [error, setError]   = useState<string | null>(null);
+  const [done, setDone]     = useState(false);
+  const [pending, setPending] = useState(false);
+  // Email-verification step
+  const [verifying, setVerifying] = useState(false);
+  const [code, setCode]           = useState("");
 
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setError(null);
-    if (pw !== pw2)  { setError("Passwords do not match."); return; }
+    e.preventDefault();
+    if (!isLoaded || !signUp || !setActive || pending) return;
+    setError(null);
+    if (pw !== pw2)    { setError("Passwords do not match."); return; }
     if (pw.length < 6) { setError("Password must be at least 6 characters."); return; }
-    go(async () => {
-      const res  = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, password: pw }) });
-      const data = await res.json();
-      if (!res.ok || !data.ok) { setError(data.error ?? "Registration failed."); return; }
-      const si = await signIn("credentials", { email, password: pw, redirect: false });
-      if (si?.error) { router.push(`/sign-in?registered=1&email=${encodeURIComponent(email)}`); return; }
-      setDone(true);
-      setTimeout(() => { window.location.href = callbackUrl; }, 1200);
-    });
+
+    const parts     = name.trim().split(/\s+/);
+    const firstName = parts[0] ?? "";
+    const lastName  = parts.slice(1).join(" ") || undefined;
+
+    setPending(true);
+    try {
+      const result = await signUp.create({ emailAddress: email, password: pw, firstName, lastName });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        setDone(true);
+        setTimeout(() => { window.location.href = callbackUrl; }, 1200);
+      } else if (result.status === "missing_requirements") {
+        // Clerk requires email verification — send the code and show OTP input
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        setVerifying(true);
+      } else {
+        setError("Unexpected sign-up status: " + result.status);
+      }
+    } catch (err: unknown) {
+      console.error("[RegisterForm]", err);
+      setError(clerkMsg(err, "Registration failed. Please try again."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function verify(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded || !signUp || !setActive || pending) return;
+    setError(null);
+    setPending(true);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        setDone(true);
+        setTimeout(() => { window.location.href = callbackUrl; }, 1200);
+      } else {
+        setError("Verification incomplete — please check the code and try again.");
+      }
+    } catch (err: unknown) {
+      console.error("[RegisterForm verify]", err);
+      setError(clerkMsg(err, "Invalid verification code."));
+    } finally {
+      setPending(false);
+    }
   }
 
   if (done) return (
@@ -346,44 +380,37 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
     </div>
   );
 
+  // Email verification step — Clerk sent a one-time code
+  if (verifying) return (
+    <form onSubmit={verify} className="space-y-4">
+      <div className="text-center space-y-1">
+        <p className="text-sm font-semibold text-white">Check your email</p>
+        <p className="text-xs text-white/40">We sent a 6-digit code to <span className="text-white/60">{email}</span></p>
+      </div>
+      <Field label="Verification code" value={code} onChange={setCode}
+        placeholder="123456" icon={Mail} autoComplete="one-time-code" />
+      {error && <Err msg={error} />}
+      <SubmitBtn pending={pending} label="Verify email" />
+    </form>
+  );
+
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Field label="Full name" value={name} onChange={setName} placeholder="Alex Smith" icon={User} autoComplete="name" />
-      <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon={Mail} autoComplete="email" />
+      <Field label="Full name" value={name} onChange={setName}
+        placeholder="Alex Smith" icon={User} autoComplete="name" />
+      <Field label="Email" type="email" value={email} onChange={setEmail}
+        placeholder="you@example.com" icon={Mail} autoComplete="email" />
       <div className="space-y-1">
-        <PwField label="Password" value={pw} onChange={setPw} autoComplete="new-password" placeholder="At least 6 characters" />
+        <PwField label="Password" value={pw} onChange={setPw}
+          autoComplete="new-password" placeholder="At least 6 characters" />
         <PasswordStrength pw={pw} />
       </div>
-      <PwField label="Confirm password" value={pw2} onChange={setPw2} autoComplete="new-password" placeholder="Repeat your password" />
+      <PwField label="Confirm password" value={pw2} onChange={setPw2}
+        autoComplete="new-password" placeholder="Repeat your password" />
       {error && <Err msg={error} />}
       <SubmitBtn pending={pending} label="Create account" />
       <p className="text-center text-[10px] text-white/30">Paper trading only · no real funds at risk</p>
     </form>
-  );
-}
-
-// ── Shared small components ────────────────────────────────────────────────
-function OAuthBtn({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled}
-      className="flex items-center justify-center gap-2 h-11 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm font-medium transition-all disabled:opacity-50">
-      {icon} {label}
-    </button>
-  );
-}
-function Divider({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1 h-px bg-white/8" /><span className="text-[10px] text-white/30">{text}</span><div className="flex-1 h-px bg-white/8" />
-    </div>
-  );
-}
-function SubmitBtn({ pending, label }: { pending: boolean; label: string }) {
-  return (
-    <button type="submit" disabled={pending}
-      className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#58a6ff] text-white hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#58a6ff]/25">
-      {pending ? <><Spinner />{label.replace("Sign", "Signing").replace("Create", "Creating")}…</> : <>{label} <ArrowRight size={14} /></>}
-    </button>
   );
 }
 
@@ -453,19 +480,16 @@ function AuthInner() {
             </span>
           </h1>
 
-          {/* Sub-text */}
           <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-8 max-w-sm">
             Real-time quotes across crypto, stocks, and global markets.
             Six institutional-grade strategies. AI-powered signals.
             All risk-free with paper trading.
           </p>
 
-          {/* Animated chart card */}
           <div className="animate-float">
             <AnimatedChart />
           </div>
 
-          {/* Stats row */}
           <div className="flex gap-3 mt-5 animate-float-late">
             <StatCard value={21} suffix="+"  label="Assets"     icon={Activity}   color="#58a6ff" />
             <StatCard value={6}              label="Strategies"  icon={TrendingUp}  color="#a855f7" />
@@ -473,7 +497,6 @@ function AuthInner() {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-[11px] text-white/20 hidden lg:block">
           © {new Date().getFullYear()} TradeAI · Paper trading only · No real funds at risk
         </p>
@@ -539,7 +562,7 @@ function AuthInner() {
 
           {/* Trust line */}
           <p className="text-center text-[10px] text-white/20 mt-4">
-            Secured with NextAuth · Zero real funds at risk
+            Secured with Clerk · Zero real funds at risk
           </p>
         </div>
       </div>

@@ -1,5 +1,6 @@
 /**
- * Dashboard screen — portfolio summary + top movers.
+ * Dashboard screen — portfolio summary (4 cards) + positions + top movers.
+ * Matches web dashboard feature parity.
  */
 import React, { useState } from "react";
 import {
@@ -9,22 +10,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  TrendingUp, TrendingDown, DollarSign, Wallet,
+  BarChart2, ArrowRight,
+} from "lucide-react-native";
 import { useColors } from "@/lib/hooks/use-colors";
 import { useT } from "@/lib/hooks/use-t";
 import { useTradingStore } from "@/lib/store";
 import { useAllQuotes } from "@/lib/hooks/use-quotes";
 import { usePortfolio } from "@/lib/hooks/use-portfolio";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtCurrency, fmtPercent, colorKey } from "@/lib/utils";
 import type { Quote } from "@/lib/types";
 
-const { width: SCREEN_W } = Dimensions.get("window");
+// ── Quote row (movers) ────────────────────────────────────────────────────
 
 function QuoteRow({ q }: { q: Quote }) {
   const colors = useColors();
@@ -34,22 +37,20 @@ function QuoteRow({ q }: { q: Quote }) {
   const name   = lang === "zh" && item?.nameCN ? item.nameCN : (item?.name ?? q.symbol);
   const router = useRouter();
   const ck     = colorKey(q.changePct);
+  const ticker = q.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
 
   return (
-    <TouchableOpacity
-      onPress={() => router.push(`/trade/${q.symbol}`)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.row, { borderBottomColor: colors.border }]}>
-        <View style={styles.rowLeft}>
-          <Text style={[styles.symbol, { color: colors.foreground }]}>{q.symbol}</Text>
-          <Text style={[styles.name, { color: colors.muted }]} numberOfLines={1}>{name}</Text>
+    <TouchableOpacity onPress={() => router.push(`/trade/${q.symbol}`)} activeOpacity={0.7}>
+      <View style={[styles.quoteRow, { borderBottomColor: colors.border }]}>
+        <View style={styles.quoteLeft}>
+          <Text style={[styles.quoteSymbol, { color: colors.foreground }]}>{ticker}</Text>
+          <Text style={[styles.quoteName, { color: colors.muted }]} numberOfLines={1}>{name}</Text>
         </View>
-        <View style={styles.rowRight}>
-          <Text style={[styles.price, { color: colors.foreground }]}>
+        <View style={styles.quoteRight}>
+          <Text style={[styles.quotePrice, { color: colors.foreground }]}>
             {fmtCurrency(q.price, q.currency)}
           </Text>
-          <Text style={[styles.change, { color: colors[ck] }]}>
+          <Text style={[styles.quotePct, { color: colors[ck] }]}>
             {fmtPercent(q.changePct)}
           </Text>
         </View>
@@ -58,10 +59,75 @@ function QuoteRow({ q }: { q: Quote }) {
   );
 }
 
+// ── Position row ──────────────────────────────────────────────────────────
+
+function PositionRow({ pos }: {
+  pos: {
+    symbol: string; qty: number;
+    avgEntryPrice: number; currentPrice: number;
+    marketValue: number; unrealizedPnl: number; unrealizedPnlPct: number;
+    type: string; currency?: string;
+  }
+}) {
+  const colors  = useColors();
+  const lang    = useTradingStore((s) => s.lang);
+  const quotes  = useTradingStore((s) => s.quotes);
+  const watchlist = useTradingStore((s) => s.watchlist);
+  const marketLists = useTradingStore((s) => s.marketLists);
+  const router  = useRouter();
+
+  // Look up name from watchlist or marketLists
+  const wlItem = watchlist.find((w) => w.symbol === pos.symbol)
+    ?? Object.values(marketLists).flat().find((w) => w.symbol === pos.symbol);
+
+  const livePrice = quotes[pos.symbol]?.price ?? pos.currentPrice;
+  const livePnl   = (livePrice - pos.avgEntryPrice) * pos.qty;
+  const livePct   = pos.avgEntryPrice > 0 ? ((livePrice - pos.avgEntryPrice) / pos.avgEntryPrice) * 100 : 0;
+  const name      = lang === "zh" && wlItem?.nameCN ? wlItem.nameCN : (wlItem?.name ?? pos.symbol);
+  const ticker    = pos.symbol.replace("USDT","").replace(/^(HK|CN)/,"");
+  const pnlKey    = colorKey(livePnl);
+  const iconColor = pos.type === "crypto"
+    ? "#bc8cff" : pos.type === "hk"
+    ? "#ffa000" : pos.type === "cn"
+    ? "#ff6b6b" : "#58a6ff";
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push(`/trade/${pos.symbol}`)}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.posRow, { borderBottomColor: colors.border }]}>
+        {/* Icon */}
+        <View style={[styles.posIcon, { backgroundColor: iconColor + "20" }]}>
+          <Text style={[styles.posIconTxt, { color: iconColor }]}>{ticker.slice(0,2)}</Text>
+        </View>
+        {/* Name + qty */}
+        <View style={styles.posLeft}>
+          <Text style={[styles.posSymbol, { color: colors.foreground }]}>{ticker}</Text>
+          <Text style={[styles.posName, { color: colors.muted }]} numberOfLines={1}>{name}</Text>
+        </View>
+        {/* P&L */}
+        <View style={styles.posRight}>
+          <Text style={[styles.posPnl, { color: colors[pnlKey] }]}>
+            {livePnl >= 0 ? "+" : ""}{fmtCurrency(Math.abs(livePnl))}
+          </Text>
+          <Text style={[styles.posPct, { color: colors[pnlKey] }]}>
+            {fmtPercent(livePct)}
+          </Text>
+        </View>
+        <ArrowRight size={12} color={colors.muted} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────
+
 export default function DashboardScreen() {
-  const colors             = useColors();
-  const t                  = useT();
-  const allQuotes          = useAllQuotes();
+  const colors   = useColors();
+  const t        = useT();
+  const lang     = useTradingStore((s) => s.lang);
+  const allQuotes = useAllQuotes();
   const { portfolio, loading, refresh } = usePortfolio();
   const [tab, setTab]      = useState<"gainers" | "losers">("gainers");
   const [refreshing, setRefreshing] = useState(false);
@@ -84,7 +150,19 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }
 
-  const dayPnlColor = portfolio ? colorKey(portfolio.dayPnl) : "muted";
+  const dayPnlKey  = portfolio ? colorKey(portfolio.dayPnl)  : "muted";
+  const totPnlKey  = portfolio ? colorKey(portfolio.totalPnl) : "muted";
+  const dayUpDown  = (portfolio?.dayPnlPct ?? 0) >= 0;
+
+  const CARDS: Array<{
+    label: string; icon: typeof DollarSign;
+    value: number | undefined; color: string; bg: string; pct?: number;
+  }> = [
+    { label: t.portfolio.equity,   icon: DollarSign, value: portfolio?.equity,    color: colors.accent,     bg: colors.accent + "12" },
+    { label: t.portfolio.cash,     icon: Wallet,      value: portfolio?.cash,      color: colors.muted,      bg: colors.surface2 },
+    { label: t.portfolio.dayPnl,   icon: TrendingUp,  value: portfolio?.dayPnl,    color: colors[dayPnlKey], bg: colors[dayPnlKey] + "12", pct: portfolio?.dayPnlPct },
+    { label: t.portfolio.totalPnl, icon: BarChart2,   value: portfolio?.totalPnl,  color: colors[totPnlKey], bg: colors[totPnlKey] + "12" },
+  ];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -93,50 +171,91 @@ export default function DashboardScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }
+        showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={[styles.title, { color: colors.foreground }]}>{t.dashboard.title}</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>{t.dashboard.subtitle}</Text>
-
-        {/* Portfolio summary cards */}
-        <View style={styles.summaryRow}>
-          <Card style={styles.summaryCard} padding={14}>
-            <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.portfolio.equity}</Text>
-            {loading && !portfolio
-              ? <Skeleton height={22} width={100} style={{ marginTop: 4 }} />
-              : <Text style={[styles.summaryValue, { color: colors.foreground }]}>
-                  {portfolio ? fmtCurrency(portfolio.equity) : "—"}
-                </Text>
-            }
-          </Card>
-          <Card style={styles.summaryCard} padding={14}>
-            <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.portfolio.dayPnl}</Text>
-            {loading && !portfolio
-              ? <Skeleton height={22} width={80} style={{ marginTop: 4 }} />
-              : <Text style={[styles.summaryValue, { color: portfolio ? colors[dayPnlColor] : colors.muted }]}>
-                  {portfolio ? fmtCurrency(portfolio.dayPnl) : "—"}
-                </Text>
-            }
-          </Card>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.title, { color: colors.foreground }]}>{t.dashboard.title}</Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>{t.dashboard.subtitle}</Text>
+          </View>
+          {portfolio && (
+            <View style={[styles.dayBadge, {
+              backgroundColor: dayUpDown ? colors.green + "18" : colors.red + "18",
+            }]}>
+              {dayUpDown
+                ? <TrendingUp size={12} color={colors.green} strokeWidth={2} />
+                : <TrendingDown size={12} color={colors.red} strokeWidth={2} />}
+              <Text style={[styles.dayBadgeTxt, { color: dayUpDown ? colors.green : colors.red }]}>
+                {fmtPercent(portfolio.dayPnlPct)} {t.dashboard.today}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Top movers */}
+        {/* ── 4 Summary cards (2×2 grid) ── */}
+        <View style={styles.cardGrid}>
+          {CARDS.map(({ label, icon: Icon, value, color, bg, pct }) => (
+            <View
+              key={label}
+              style={[styles.summaryCard, { backgroundColor: bg, borderColor: colors.border }]}
+            >
+              <View style={styles.cardTop}>
+                <Icon size={13} color={color} strokeWidth={2} />
+                <Text style={[styles.cardLabel, { color: colors.muted }]}>{label}</Text>
+              </View>
+              {loading && !portfolio ? (
+                <Skeleton height={20} width={80} style={{ marginTop: 6 }} />
+              ) : (
+                <>
+                  <Text style={[styles.cardValue, { color }]}>
+                    {value !== undefined ? fmtCurrency(value) : "—"}
+                  </Text>
+                  {pct !== undefined && value !== undefined && (
+                    <Text style={[styles.cardPct, { color }]}>{fmtPercent(pct)}</Text>
+                  )}
+                </>
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* ── Open positions ── */}
+        {(portfolio?.positions?.length ?? 0) > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                {t.dashboard.positions}
+              </Text>
+              <Text style={[styles.sectionCount, { color: colors.muted }]}>
+                {portfolio!.positions.length} {t.portfolio.positions}
+              </Text>
+            </View>
+            <Card padding={0}>
+              {portfolio!.positions.map((p) => (
+                <PositionRow key={p.symbol} pos={p} />
+              ))}
+            </Card>
+          </>
+        )}
+
+        {/* ── Top movers ── */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t.dashboard.topMovers}</Text>
-          <View style={[styles.tabs, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+          <View style={[styles.moversTabRow, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
             <TouchableOpacity
-              style={[styles.tabBtn, tab === "gainers" && { backgroundColor: colors.green + "30" }]}
+              style={[styles.moversTabBtn, tab === "gainers" && { backgroundColor: colors.green + "30" }]}
               onPress={() => setTab("gainers")}
             >
-              <Text style={[styles.tabText, { color: tab === "gainers" ? colors.green : colors.muted }]}>
+              <Text style={[styles.moversTabTxt, { color: tab === "gainers" ? colors.green : colors.muted }]}>
                 {t.dashboard.gainers}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabBtn, tab === "losers" && { backgroundColor: colors.red + "30" }]}
+              style={[styles.moversTabBtn, tab === "losers" && { backgroundColor: colors.red + "30" }]}
               onPress={() => setTab("losers")}
             >
-              <Text style={[styles.tabText, { color: tab === "losers" ? colors.red : colors.muted }]}>
+              <Text style={[styles.moversTabTxt, { color: tab === "losers" ? colors.red : colors.muted }]}>
                 {t.dashboard.losers}
               </Text>
             </TouchableOpacity>
@@ -155,26 +274,56 @@ export default function DashboardScreen() {
   );
 }
 
+// ── Styles ─────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  safe:         { flex: 1 },
-  scroll:       { padding: 16, paddingBottom: 32 },
-  title:        { fontSize: 24, fontWeight: "700", marginBottom: 2 },
-  subtitle:     { fontSize: 13, marginBottom: 20 },
-  summaryRow:   { flexDirection: "row", gap: 12, marginBottom: 20 },
-  summaryCard:  { flex: 1 },
-  summaryLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
-  summaryValue: { fontSize: 18, fontWeight: "700", marginTop: 4 },
-  sectionHeader:{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: "700" },
-  tabs:         { flexDirection: "row", borderRadius: 8, borderWidth: 1, overflow: "hidden" },
-  tabBtn:       { paddingHorizontal: 12, paddingVertical: 5 },
-  tabText:      { fontSize: 12, fontWeight: "600" },
-  row:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: StyleSheet.hairlineWidth },
-  rowLeft:      { flex: 1, marginRight: 12 },
-  symbol:       { fontSize: 14, fontWeight: "700" },
-  name:         { fontSize: 12, marginTop: 1 },
-  rowRight:     { alignItems: "flex-end" },
-  price:        { fontSize: 14, fontWeight: "600" },
-  change:       { fontSize: 12, marginTop: 1, fontWeight: "600" },
-  empty:        { padding: 20, textAlign: "center" },
+  safe:       { flex: 1 },
+  scroll:     { padding: 16, paddingBottom: 32 },
+
+  // Header
+  headerRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 },
+  title:      { fontSize: 24, fontWeight: "700" },
+  subtitle:   { fontSize: 12, marginTop: 2 },
+  dayBadge:   { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginTop: 4 },
+  dayBadgeTxt:{ fontSize: 12, fontWeight: "600" },
+
+  // 2×2 card grid
+  cardGrid:    { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
+  summaryCard: { width: "48%", borderRadius: 12, borderWidth: 1, padding: 12 },
+  cardTop:     { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  cardLabel:   { fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3, flex: 1 },
+  cardValue:   { fontSize: 18, fontWeight: "700" },
+  cardPct:     { fontSize: 11, fontWeight: "600", marginTop: 1 },
+
+  // Section header
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 4 },
+  sectionTitle:  { fontSize: 16, fontWeight: "700" },
+  sectionCount:  { fontSize: 12 },
+
+  // Position row
+  posRow:    { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  posIcon:   { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  posIconTxt:{ fontSize: 12, fontWeight: "700" },
+  posLeft:   { flex: 1, minWidth: 0 },
+  posSymbol: { fontSize: 14, fontWeight: "700" },
+  posName:   { fontSize: 11, marginTop: 1 },
+  posRight:  { alignItems: "flex-end", marginRight: 8 },
+  posPnl:    { fontSize: 13, fontWeight: "700" },
+  posPct:    { fontSize: 11, fontWeight: "600", marginTop: 1 },
+
+  // Movers tab
+  moversTabRow: { flexDirection: "row", borderRadius: 8, borderWidth: 1, overflow: "hidden" },
+  moversTabBtn: { paddingHorizontal: 12, paddingVertical: 4 },
+  moversTabTxt: { fontSize: 12, fontWeight: "600" },
+
+  // Quote row
+  quoteRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  quoteLeft:  { flex: 1, marginRight: 12 },
+  quoteSymbol:{ fontSize: 14, fontWeight: "700" },
+  quoteName:  { fontSize: 11, marginTop: 1 },
+  quoteRight: { alignItems: "flex-end" },
+  quotePrice: { fontSize: 14, fontWeight: "600" },
+  quotePct:   { fontSize: 12, fontWeight: "600", marginTop: 1 },
+
+  empty:      { padding: 20, textAlign: "center" },
 });

@@ -7,13 +7,23 @@ export interface Translations {
   ai: { title: string; analyse: string; analysing: string; crunching: string; clickHint: string; clickHintBtn: string; sentiment: string; riskLevel: string; support: string; resistance: string; signals: string; updated: string; keyLevels: string; bullish: string; bearish: string; neutral: string; low: string; medium: string; high: string; risk: string };
   chart: { loading: string; range24h: string; vol: string; title: string };
   dashboard: { title: string; subtitle: string; greeting: string; greetingSub: string; today: string; positions: string; topMovers: string; gainers: string; losers: string; noPositions: string };
-  portfolio: { title: string; subtitle: string; equity: string; cash: string; dayPnl: string; totalPnl: string; positions: string; openPositions: string; noPositions: string; allocation: string; total: string };
+  portfolio: { title: string; subtitle: string; equity: string; cash: string; dayPnl: string; totalPnl: string; positions: string; openPositions: string; noPositions: string; allocation: string; total: string; byMarket: string; pnlSummary: string; cashUSD: string; source: string };
   markets: { title: string; subtitle: string; forex: string; rate: string; pair: string; usEquities: string; chinaHK: string; mainlandCN: string; crypto: string; cnHk: string; change24h: string; volume: string };
   table: { asset: string; qty: string; avgCost: string; current: string; value: string; pnl: string; high: string; low: string };
   badge: { stock: string; crypto: string; hk: string; cn: string; forex: string };
   strategies: { title: string; subtitle: string; tabLabel: string; asset: string; signals: string; consensus: string; trade: string; refresh: string; strongBuy: string; buy: string; hold: string; sell: string; strongSell: string };
   auth: { signIn: string; signOut: string; profile: string; demoHint: string };
   settings: { title: string; sectionAppearance: string; sectionTrading: string; sectionAccount: string; sectionAbout: string; language: string; theme: string; dark: string; light: string; accountEquity: string; accountCash: string; accountDayPnl: string; accountAlpaca: string; accountManage: string; aboutMarketUS: string; aboutMarketCrypto: string; aboutMarketOther: string; aboutDB: string; aboutAuth: string };
+  aiTerminal: {
+    title: string; subtitle: string;
+    statusOnline: string; statusOffline: string; statusChecking: string;
+    latency: string; model: string; provider: string;
+    newsFeed: string; noNews: string;
+    analysisTerminal: string; analyse: string; analysing: string; selectAsset: string;
+    chat: string; chatPlaceholder: string; send: string; clearChat: string;
+    you: string; quantai: string; setupHint: string;
+    bullish: string; bearish: string; neutral: string;
+  };
   loading: string; error: string;
 }
 
@@ -23,11 +33,24 @@ const en: Translations = {
   ai: { title: "AI Analysis", analyse: "Analyse", analysing: "Analysing…", crunching: "Crunching market data…", clickHint: "Tap", clickHintBtn: "Analyse", sentiment: "Sentiment", riskLevel: "Risk", support: "Support", resistance: "Resistance", signals: "Signals", updated: "Updated", keyLevels: "Key Levels", bullish: "BULLISH", bearish: "BEARISH", neutral: "NEUTRAL", low: "LOW", medium: "MEDIUM", high: "HIGH", risk: "RISK" },
   chart: { loading: "Loading chart…", range24h: "24h range", vol: "Vol", title: "Chart" },
   dashboard: { title: "Dashboard", subtitle: "Portfolio overview", greeting: "Good morning 👋", greetingSub: "Your portfolio today.", today: "today", positions: "Open Positions", topMovers: "Top Movers", gainers: "Top Gainers", losers: "Top Losers", noPositions: "No open positions" },
-  portfolio: { title: "Portfolio", subtitle: "Positions, P&L & allocation", equity: "Total Equity", cash: "Cash", dayPnl: "Day P&L", totalPnl: "Total P&L", positions: "positions", openPositions: "Open Positions", noPositions: "No open positions", allocation: "Allocation", total: "Total" },
+  portfolio: { title: "Portfolio", subtitle: "Positions, P&L & allocation", equity: "Total Equity", cash: "Available Cash", dayPnl: "Day P&L", totalPnl: "Total P&L", positions: "positions", openPositions: "Open Positions", noPositions: "No open positions", allocation: "Allocation", total: "Total", byMarket: "By Market", pnlSummary: "P&L Summary", cashUSD: "USD Cash", source: "Source" },
   markets: { title: "Markets", subtitle: "Live prices", forex: "FX", rate: "Rate", pair: "Pair", usEquities: "US Equities", chinaHK: "HK Stocks", mainlandCN: "A-Shares", crypto: "Crypto", cnHk: "HK Stocks", change24h: "24h Change", volume: "Volume" },
   table: { asset: "Asset", qty: "Qty", avgCost: "Avg Cost", current: "Current", value: "Value", pnl: "P&L", high: "High", low: "Low" },
   badge: { stock: "US", crypto: "Crypto", hk: "HK", cn: "CN", forex: "FX" },
   strategies: { title: "Strategies", subtitle: "Institutional-grade signals", tabLabel: "Strategy", asset: "Asset", signals: "Signals", consensus: "Consensus", trade: "Trade", refresh: "Refresh", strongBuy: "STRONG BUY", buy: "BUY", hold: "HOLD", sell: "SELL", strongSell: "STRONG SELL" },
+  aiTerminal: {
+    title: "AI Command Center", subtitle: "Real-time analysis · News · Chat",
+    statusOnline: "LLM ONLINE", statusOffline: "LLM OFFLINE", statusChecking: "CONNECTING…",
+    latency: "latency", model: "Model", provider: "Provider",
+    newsFeed: "News Feed", noNews: "No news yet — select an asset and analyse",
+    analysisTerminal: "Analysis Terminal", analyse: "RUN ANALYSIS", analysing: "ANALYSING…",
+    selectAsset: "Select an asset above",
+    chat: "AI Chat", chatPlaceholder: "Ask QuantAI anything about markets…",
+    send: "Send", clearChat: "Clear",
+    you: "YOU", quantai: "QUANTAI",
+    setupHint: "Add AI_API_KEY to enable analysis",
+    bullish: "BULL", bearish: "BEAR", neutral: "NEUT",
+  },
   auth: { signIn: "Sign In", signOut: "Sign Out", profile: "Profile", demoHint: "Demo · any email · password: demo123" },
   settings: { title: "Settings", sectionAppearance: "Appearance", sectionTrading: "Trading", sectionAccount: "Account", sectionAbout: "About", language: "Language", theme: "Theme", dark: "Dark", light: "Light", accountEquity: "Total Equity", accountCash: "Cash", accountDayPnl: "Day P&L", accountAlpaca: "Alpaca Paper Account", accountManage: "Manage at Alpaca ↗", aboutMarketUS: "US Stocks", aboutMarketCrypto: "Crypto", aboutMarketOther: "HK / CN / FX", aboutDB: "Neon Postgres / Mock", aboutAuth: "NextAuth.js v5" },
   loading: "Loading…", error: "Something went wrong",
@@ -39,11 +62,24 @@ const zh: Translations = {
   ai: { title: "AI 分析", analyse: "开始分析", analysing: "分析中…", crunching: "处理市场数据…", clickHint: "点击", clickHintBtn: "开始分析", sentiment: "市场情绪", riskLevel: "风险等级", support: "支撑位", resistance: "阻力位", signals: "交易信号", updated: "更新时间", keyLevels: "关键价位", bullish: "看涨", bearish: "看跌", neutral: "中性", low: "低", medium: "中", high: "高", risk: "风险" },
   chart: { loading: "图表加载中…", range24h: "24小时区间", vol: "成交量", title: "图表" },
   dashboard: { title: "总览", subtitle: "投资组合概览", greeting: "早上好 👋", greetingSub: "今日投资组合。", today: "今日", positions: "当前持仓", topMovers: "涨跌榜", gainers: "涨幅榜", losers: "跌幅榜", noPositions: "暂无持仓" },
-  portfolio: { title: "持仓", subtitle: "仓位、盈亏与资产分配", equity: "总净值", cash: "可用资金", dayPnl: "当日盈亏", totalPnl: "总盈亏", positions: "个持仓", openPositions: "当前持仓", noPositions: "暂无持仓", allocation: "资产分配", total: "合计" },
+  portfolio: { title: "持仓", subtitle: "仓位、盈亏与资产分配", equity: "总净值", cash: "可用资金", dayPnl: "当日盈亏", totalPnl: "总盈亏", positions: "个持仓", openPositions: "当前持仓", noPositions: "暂无持仓", allocation: "资产分配", total: "合计", byMarket: "按市场", pnlSummary: "盈亏汇总", cashUSD: "美元现金", source: "数据源" },
   markets: { title: "市场", subtitle: "全品种实时行情", forex: "外汇", rate: "汇率", pair: "货币对", usEquities: "美股", chinaHK: "港股", mainlandCN: "A股", crypto: "加密货币", cnHk: "港股", change24h: "24小时涨跌", volume: "成交量" },
   table: { asset: "资产", qty: "数量", avgCost: "均价", current: "现价", value: "市值", pnl: "盈亏", high: "最高", low: "最低" },
   badge: { stock: "美股", crypto: "加密", hk: "港股", cn: "A股", forex: "外汇" },
   strategies: { title: "策略筛选器", subtitle: "六大机构级信号", tabLabel: "策略", asset: "资产", signals: "策略信号", consensus: "综合评级", trade: "交易", refresh: "刷新", strongBuy: "强烈买入", buy: "买入", hold: "观望", sell: "卖出", strongSell: "强烈卖出" },
+  aiTerminal: {
+    title: "AI 指挥中心", subtitle: "实时分析 · 资讯 · 对话",
+    statusOnline: "LLM 在线", statusOffline: "LLM 离线", statusChecking: "连接中…",
+    latency: "延迟", model: "模型", provider: "提供商",
+    newsFeed: "市场资讯", noNews: "暂无资讯，选择资产并运行分析",
+    analysisTerminal: "分析终端", analyse: "运行分析", analysing: "分析中…",
+    selectAsset: "请在上方选择资产",
+    chat: "AI 对话", chatPlaceholder: "向 QuantAI 提问…",
+    send: "发送", clearChat: "清空",
+    you: "我", quantai: "QUANTAI",
+    setupHint: "需配置 AI_API_KEY 才能启用分析",
+    bullish: "看涨", bearish: "看跌", neutral: "中性",
+  },
   auth: { signIn: "登录", signOut: "退出登录", profile: "个人资料", demoHint: "演示账号 · 任意邮箱 · 密码：demo123" },
   settings: { title: "设置", sectionAppearance: "外观", sectionTrading: "交易", sectionAccount: "账户", sectionAbout: "关于", language: "语言", theme: "主题", dark: "暗色", light: "浅色", accountEquity: "总净值", accountCash: "现金", accountDayPnl: "今日盈亏", accountAlpaca: "Alpaca 纸交易账户", accountManage: "前往 Alpaca 管理 ↗", aboutMarketUS: "美股", aboutMarketCrypto: "加密货币", aboutMarketOther: "港股 / A股 / 外汇", aboutDB: "Neon Postgres / Mock", aboutAuth: "NextAuth.js v5" },
   loading: "加载中…", error: "发生错误",

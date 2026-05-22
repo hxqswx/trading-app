@@ -1,31 +1,25 @@
 /**
- * Next.js 16 Proxy (formerly Middleware) — protects all page routes.
+ * Next.js 16 Proxy — protects all page routes using Clerk.
  *
- * Public routes: /sign-in, all /api/* routes, Next.js internals, static assets.
- * Everything else requires an active session; unauthenticated users are
- * redirected to /sign-in, then bounced back via callbackUrl after sign-in.
+ * Public routes: /sign-in (and static assets / API routes are excluded via matcher).
+ * Everything else requires a Clerk session; unauthenticated users are
+ * redirected to /sign-in automatically by Clerk's auth.protect().
  */
-import { auth } from "@/auth";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export default auth((req) => {
-  const { nextUrl, auth: session } = req;
-  const isLoggedIn   = !!session;
-  const isAuthPage   = nextUrl.pathname === "/sign-in" || nextUrl.pathname === "/sign-up";
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)"]);
 
-  // Already signed in → keep away from auth pages
-  if (isLoggedIn && isAuthPage) {
-    return NextResponse.redirect(new URL("/", req.url));
+export default clerkMiddleware(async (auth, req) => {
+  // Already signed in → redirect away from sign-in page
+  if (isPublicRoute(req)) {
+    const { userId } = await auth();
+    if (userId) return NextResponse.redirect(new URL("/", req.url));
+    return; // unauthenticated on public route — allow
   }
 
-  // Not signed in → redirect to sign-in, preserve callbackUrl
-  if (!isLoggedIn && !isAuthPage) {
-    const loginUrl = new URL("/sign-in", req.url);
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  // Protected route — Clerk redirects to /sign-in if not authenticated
+  await auth.protect();
 });
 
 // Run proxy on page routes only — skip API routes and static assets

@@ -3,13 +3,13 @@ import { Animated, View, StyleSheet, ViewStyle } from "react-native";
 import { useColors } from "@/lib/hooks/use-colors";
 
 interface SkeletonProps {
-  width?:  number | string;
+  width?:  number;
   height?: number;
   style?:  ViewStyle;
   radius?: number;
 }
 
-export function Skeleton({ width = "100%", height = 16, style, radius = 6 }: SkeletonProps) {
+export function Skeleton({ width, height = 16, style, radius = 6 }: SkeletonProps) {
   const colors  = useColors();
   const opacity = useRef(new Animated.Value(0.4)).current;
 

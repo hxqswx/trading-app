@@ -8,6 +8,56 @@ import type {
 } from "./types";
 import type { Lang } from "./i18n";
 
+// ── Per-market lists (Markets page tabs) ─────────────────────────────────
+export const DEFAULT_WEB_MARKET_LISTS: Record<AssetType, WatchlistItem[]> = {
+  stock: [
+    { symbol: "AAPL",  name: "Apple",          nameCN: "苹果",        type: "stock" },
+    { symbol: "NVDA",  name: "NVIDIA",          nameCN: "英伟达",      type: "stock" },
+    { symbol: "TSLA",  name: "Tesla",           nameCN: "特斯拉",      type: "stock" },
+    { symbol: "MSFT",  name: "Microsoft",       nameCN: "微软",        type: "stock" },
+    { symbol: "GOOGL", name: "Alphabet",        nameCN: "谷歌",        type: "stock" },
+    { symbol: "META",  name: "Meta Platforms",  nameCN: "Meta",        type: "stock" },
+    { symbol: "AMZN",  name: "Amazon",          nameCN: "亚马逊",      type: "stock" },
+    { symbol: "BABA",  name: "Alibaba",         nameCN: "阿里巴巴",    type: "stock" },
+    { symbol: "PDD",   name: "Pinduoduo",       nameCN: "拼多多",      type: "stock" },
+    { symbol: "BIDU",  name: "Baidu",           nameCN: "百度",        type: "stock" },
+  ],
+  crypto: [
+    { symbol: "BTCUSDT", name: "Bitcoin",   nameCN: "比特币",  type: "crypto" },
+    { symbol: "ETHUSDT", name: "Ethereum",  nameCN: "以太坊",  type: "crypto" },
+    { symbol: "SOLUSDT", name: "Solana",    nameCN: "索拉纳",  type: "crypto" },
+    { symbol: "BNBUSDT", name: "BNB",       nameCN: "币安币",  type: "crypto" },
+    { symbol: "XRPUSDT", name: "Ripple",    nameCN: "瑞波币",  type: "crypto" },
+    { symbol: "DOGEUSDT",name: "Dogecoin",  nameCN: "狗狗币",  type: "crypto" },
+  ],
+  hk: [
+    { symbol: "HK0700", name: "Tencent",        nameCN: "腾讯控股",   type: "hk" },
+    { symbol: "HK9988", name: "Alibaba HK",     nameCN: "阿里巴巴-W", type: "hk" },
+    { symbol: "HK3690", name: "Meituan",        nameCN: "美团-W",     type: "hk" },
+    { symbol: "HK1810", name: "Xiaomi",         nameCN: "小米集团-W", type: "hk" },
+    { symbol: "HK0388", name: "HKEX",           nameCN: "香港交易所", type: "hk" },
+    { symbol: "HK2318", name: "Ping An HK",     nameCN: "中国平安",   type: "hk" },
+  ],
+  cn: [
+    { symbol: "CNMTAI", name: "Kweichow Moutai", nameCN: "贵州茅台", type: "cn" },
+    { symbol: "CNCATL", name: "CATL",            nameCN: "宁德时代", type: "cn" },
+    { symbol: "CNBYD",  name: "BYD",             nameCN: "比亚迪",   type: "cn" },
+    { symbol: "CNPING", name: "Ping An",         nameCN: "中国平安", type: "cn" },
+    { symbol: "CNICBC", name: "ICBC",            nameCN: "工商银行", type: "cn" },
+    { symbol: "CNCMB",  name: "CMB",             nameCN: "招商银行", type: "cn" },
+  ],
+  forex: [
+    { symbol: "USDCNY", name: "USD/CNY", nameCN: "美元兑人民币", type: "forex" },
+    { symbol: "EURCNY", name: "EUR/CNY", nameCN: "欧元兑人民币", type: "forex" },
+    { symbol: "GBPCNY", name: "GBP/CNY", nameCN: "英镑兑人民币", type: "forex" },
+    { symbol: "JPYCNY", name: "JPY/CNY", nameCN: "日元兑人民币", type: "forex" },
+    { symbol: "HKDCNY", name: "HKD/CNY", nameCN: "港元兑人民币", type: "forex" },
+    { symbol: "EURUSD", name: "EUR/USD", nameCN: "欧元兑美元",   type: "forex" },
+    { symbol: "GBPUSD", name: "GBP/USD", nameCN: "英镑兑美元",   type: "forex" },
+    { symbol: "USDJPY", name: "USD/JPY", nameCN: "美元兑日元",   type: "forex" },
+  ],
+};
+
 export const DEFAULT_WATCHLIST: WatchlistItem[] = [
   // Crypto  (forex rates have their own dedicated panel — no need to be in watchlist)
   { symbol: "BTCUSDT", name: "Bitcoin",        nameCN: "比特币",      type: "crypto" },
@@ -84,6 +134,12 @@ interface TradingStore {
   removeFromWatchlist: (symbol: string) => void;
   reorderWatchlist:    (from: number, to: number) => void;
   resetWatchlist:      () => void;
+
+  // ── Per-market lists (Markets page tabs) ─────────────────────────────────
+  marketLists:          Record<AssetType, WatchlistItem[]>;
+  addToMarketList:      (type: AssetType, item: WatchlistItem) => void;
+  removeFromMarketList: (type: AssetType, symbol: string) => void;
+  resetMarketList:      (type: AssetType) => void;
 
   // ── UI state ──────────────────────────────────────────────────────────────
   tradeMode: "simple" | "pro";
@@ -228,6 +284,32 @@ export const useTradingStore = create<TradingStore>()(
 
       resetWatchlist: () => set({ watchlist: DEFAULT_WATCHLIST }),
 
+      // ── Per-market lists ───────────────────────────────────────────────
+      marketLists: DEFAULT_WEB_MARKET_LISTS,
+      addToMarketList: (type, item) =>
+        set((s) => ({
+          marketLists: {
+            ...s.marketLists,
+            [type]: s.marketLists[type].find((w) => w.symbol === item.symbol)
+              ? s.marketLists[type]
+              : [...s.marketLists[type], item],
+          },
+        })),
+      removeFromMarketList: (type, symbol) =>
+        set((s) => ({
+          marketLists: {
+            ...s.marketLists,
+            [type]: s.marketLists[type].filter((w) => w.symbol !== symbol),
+          },
+        })),
+      resetMarketList: (type) =>
+        set((s) => ({
+          marketLists: {
+            ...s.marketLists,
+            [type]: DEFAULT_WEB_MARKET_LISTS[type],
+          },
+        })),
+
       // ── UI state ───────────────────────────────────────────────────────
       tradeMode: "simple",
       setTradeMode: (tradeMode) => set({ tradeMode }),
@@ -264,9 +346,10 @@ export const useTradingStore = create<TradingStore>()(
       name: "tradeai-store-v2",
       // Only persist user preferences — market data and portfolio regenerate on load
       partialize: (state) => ({
-        watchlist: state.watchlist,
-        lang:      state.lang,
-        settings:  state.settings,
+        watchlist:   state.watchlist,
+        lang:        state.lang,
+        settings:    state.settings,
+        marketLists: state.marketLists,
       }),
     }
   )

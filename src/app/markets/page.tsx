@@ -1,315 +1,448 @@
 "use client";
 
-import { useTradingStore, DEFAULT_WATCHLIST } from "@/lib/store";
+/**
+ * Markets page — per-market tabs, customisable symbol lists.
+ * Desktop: full table with High / Low / Volume.
+ * Mobile / tablet (< md): compact cards, 2-column grid on sm.
+ */
+
+import { useState } from "react";
+import { useTradingStore } from "@/lib/store";
 import { useT } from "@/lib/hooks/use-t";
 import { fmtPercent, colorClass, fmtLarge } from "@/lib/utils";
 import { currencySymbol, ASSET_META } from "@/lib/mock";
+import { getAsset } from "@/lib/asset-registry";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { AddAssetModal } from "@/components/watchlist/add-asset-modal";
+import {
+  TrendingUp, TrendingDown, Minus,
+  Pencil, Check, Plus, X, RotateCcw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { Quote } from "@/lib/types";
+import type { Quote, AssetType, WatchlistItem } from "@/lib/types";
 
-// ── Forex catalog (same order as ForexPanel) ───────────────────────────────
+// ── Tab config ─────────────────────────────────────────────────────────────
 
-interface FxEntry {
-  symbol: string; base: string; quote: string;
-  nameCN: string; name: string;
-}
+type MarketTab = AssetType;
+const TABS: MarketTab[] = ["stock", "crypto", "hk", "cn", "forex"];
 
-const CNY_PAIRS: FxEntry[] = [
-  { symbol: "USDCNY", base: "USD", quote: "CNY", nameCN: "美元兑人民币",     name: "US Dollar / CNY"          },
-  { symbol: "EURCNY", base: "EUR", quote: "CNY", nameCN: "欧元兑人民币",     name: "Euro / CNY"               },
-  { symbol: "GBPCNY", base: "GBP", quote: "CNY", nameCN: "英镑兑人民币",     name: "British Pound / CNY"      },
-  { symbol: "JPYCNY", base: "JPY", quote: "CNY", nameCN: "日元兑人民币",     name: "Japanese Yen / CNY"       },
-  { symbol: "HKDCNY", base: "HKD", quote: "CNY", nameCN: "港元兑人民币",     name: "HK Dollar / CNY"          },
-  { symbol: "AUDCNY", base: "AUD", quote: "CNY", nameCN: "澳元兑人民币",     name: "Australian Dollar / CNY"  },
-  { symbol: "CADCNY", base: "CAD", quote: "CNY", nameCN: "加元兑人民币",     name: "Canadian Dollar / CNY"    },
-  { symbol: "CHFCNY", base: "CHF", quote: "CNY", nameCN: "瑞郎兑人民币",     name: "Swiss Franc / CNY"        },
-  { symbol: "SGDCNY", base: "SGD", quote: "CNY", nameCN: "新加坡元兑人民币", name: "Singapore Dollar / CNY"   },
-  { symbol: "KRWCNY", base: "KRW", quote: "CNY", nameCN: "韩元兑人民币",     name: "Korean Won / CNY"         },
-];
-
-const MAJOR_PAIRS: FxEntry[] = [
-  { symbol: "EURUSD", base: "EUR", quote: "USD", nameCN: "欧元兑美元", name: "Euro / US Dollar"       },
-  { symbol: "USDJPY", base: "USD", quote: "JPY", nameCN: "美元兑日元", name: "US Dollar / Japanese Yen"},
-  { symbol: "GBPUSD", base: "GBP", quote: "USD", nameCN: "英镑兑美元", name: "British Pound / USD"     },
-];
-
-/** Per-base-currency icon colours */
-const BASE_COLOR: Record<string, string> = {
-  USD: "bg-blue-500/15 text-blue-400",
-  EUR: "bg-indigo-500/15 text-indigo-400",
-  GBP: "bg-violet-500/15 text-violet-400",
-  JPY: "bg-rose-500/15 text-rose-400",
-  HKD: "bg-amber-500/15 text-amber-400",
-  AUD: "bg-cyan-500/15 text-cyan-400",
-  CAD: "bg-orange-500/15 text-orange-400",
-  CHF: "bg-red-500/15 text-red-400",
-  SGD: "bg-teal-500/15 text-teal-400",
-  KRW: "bg-pink-500/15 text-pink-400",
+const MARKET_META: Record<MarketTab, { labelZh: string; labelEn: string; color: string; textColor: string; badgeColor: string }> = {
+  stock:  { labelZh: "美股",   labelEn: "US Stocks",   color: "#6366f1", textColor: "text-indigo-400",  badgeColor: "bg-indigo-500/15 border-indigo-500/30 text-indigo-400"  },
+  crypto: { labelZh: "加密",   labelEn: "Crypto",      color: "#a855f7", textColor: "text-purple-400",  badgeColor: "bg-purple-500/15 border-purple-500/30 text-purple-400"  },
+  hk:     { labelZh: "港股",   labelEn: "HK Stocks",   color: "#f59e0b", textColor: "text-amber-400",   badgeColor: "bg-amber-500/15 border-amber-500/30 text-amber-400"    },
+  cn:     { labelZh: "A股",    labelEn: "A-Shares",    color: "#ef4444", textColor: "text-red-400",     badgeColor: "bg-red-500/15 border-red-500/30 text-red-400"          },
+  forex:  { labelZh: "外汇",   labelEn: "Forex",       color: "#10b981", textColor: "text-emerald-400", badgeColor: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"},
 };
 
-function fmtRate(price: number): string {
-  if (price < 0.01) return price.toFixed(6);
-  return price.toFixed(4);
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function fmtPrice(price: number, isForex: boolean): string {
+  if (isForex) return price < 0.01 ? price.toFixed(6) : price.toFixed(4);
+  return price.toLocaleString("en-US", {
+    minimumFractionDigits:  price < 10 ? 4 : 2,
+    maximumFractionDigits:  price < 10 ? 4 : 2,
+  });
+}
+
+function tickerLabel(symbol: string, type: AssetType): string {
+  if (type === "forex") return symbol.slice(0, 3) + "/" + symbol.slice(3);
+  return symbol.replace("USDT", "").replace(/^(HK|CN)/, "");
+}
+
+function iconBgClass(type: AssetType): string {
+  if (type === "crypto") return "bg-purple-500/15 text-purple-400";
+  if (type === "hk")     return "bg-amber-500/15 text-amber-400";
+  if (type === "cn")     return "bg-red-500/15 text-red-400";
+  if (type === "forex")  return "bg-emerald-500/15 text-emerald-400";
+  return "bg-blue-500/15 text-blue-400";
+}
+
+// ── Desktop table row ──────────────────────────────────────────────────────
+
+function TableRow({
+  item, quote, editMode, onRemove, onNavigate, lang,
+}: {
+  item: WatchlistItem; quote: Quote | undefined;
+  editMode: boolean; lang: string;
+  onRemove: () => void; onNavigate: () => void;
+}) {
+  const isForex = item.type === "forex";
+  const meta    = ASSET_META[item.symbol] ?? getAsset(item.symbol);
+  const name    = lang === "zh" && (meta?.nameCN ?? item.nameCN) ? (meta?.nameCN ?? item.nameCN) : (meta?.name ?? item.name);
+  const ticker  = tickerLabel(item.symbol, item.type);
+  const sym     = isForex ? "" : currencySymbol(meta?.currency ?? "USD");
+  const up      = (quote?.changePct ?? 0) > 0;
+  const down    = (quote?.changePct ?? 0) < 0;
+  const m       = MARKET_META[item.type];
+
+  return (
+    <tr
+      onClick={editMode ? undefined : onNavigate}
+      className={`border-b border-[var(--border)] last:border-0 transition-colors ${editMode ? "" : "hover:bg-[var(--surface-2)] cursor-pointer"}`}
+    >
+      {/* Asset */}
+      <td className="px-4 md:px-5 py-3.5 md:py-4">
+        <div className="flex items-center gap-3">
+          {/* Delete button */}
+          {editMode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="w-5 h-5 flex items-center justify-center rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 shrink-0 transition-colors"
+            >
+              <X size={10} strokeWidth={2.5} />
+            </button>
+          )}
+          {/* Icon */}
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${iconBgClass(item.type)}`}>
+            {isForex ? item.symbol.slice(0, 3) : ticker.slice(0, 2)}
+          </div>
+          {/* Name */}
+          <div className="min-w-0">
+            <div className="font-semibold text-sm leading-tight">{ticker}</div>
+            <div className="text-xs text-[var(--muted)] truncate max-w-[140px]">{name}</div>
+          </div>
+          <span className={`hidden sm:inline text-[9px] font-bold px-1.5 py-0.5 rounded border ${m.badgeColor}`}>
+            {lang === "zh" ? m.labelZh : m.labelEn}
+          </span>
+        </div>
+      </td>
+
+      {quote ? (
+        <>
+          {/* Price */}
+          <td className="px-4 md:px-5 py-3.5 md:py-4 text-right font-mono font-semibold text-sm whitespace-nowrap">
+            {sym}{fmtPrice(quote.price, isForex)}
+          </td>
+          {/* Change */}
+          <td className={`px-4 md:px-5 py-3.5 md:py-4 text-right font-mono text-sm ${colorClass(quote.changePct)}`}>
+            <span className="flex items-center justify-end gap-1">
+              {up   && <TrendingUp   size={12} strokeWidth={2} />}
+              {down && <TrendingDown size={12} strokeWidth={2} />}
+              {!up && !down && <Minus size={12} strokeWidth={2} />}
+              {fmtPercent(quote.changePct)}
+            </span>
+          </td>
+          {/* High */}
+          <td className="hidden md:table-cell px-5 py-4 text-right font-mono text-sm text-[var(--muted)]">
+            {sym}{fmtPrice(quote.high, isForex)}
+          </td>
+          {/* Low */}
+          <td className="hidden md:table-cell px-5 py-4 text-right font-mono text-sm text-[var(--muted)]">
+            {sym}{fmtPrice(quote.low, isForex)}
+          </td>
+          {/* Volume */}
+          <td className="hidden lg:table-cell px-5 py-4 text-right font-mono text-sm text-[var(--muted)]">
+            {isForex ? "—" : fmtLarge(quote.volume)}
+          </td>
+        </>
+      ) : (
+        <td colSpan={5} className="px-5 py-4 text-right text-xs text-[var(--muted)] animate-pulse">
+          加载中…
+        </td>
+      )}
+    </tr>
+  );
+}
+
+// ── Mobile card ────────────────────────────────────────────────────────────
+
+function MobileCard({
+  item, quote, editMode, onRemove, onNavigate, lang,
+}: {
+  item: WatchlistItem; quote: Quote | undefined;
+  editMode: boolean; lang: string;
+  onRemove: () => void; onNavigate: () => void;
+}) {
+  const isForex = item.type === "forex";
+  const meta    = ASSET_META[item.symbol] ?? getAsset(item.symbol);
+  const name    = lang === "zh" && (meta?.nameCN ?? item.nameCN) ? (meta?.nameCN ?? item.nameCN) : (meta?.name ?? item.name);
+  const ticker  = tickerLabel(item.symbol, item.type);
+  const sym     = isForex ? "" : currencySymbol(meta?.currency ?? "USD");
+  const up      = (quote?.changePct ?? 0) > 0;
+  const down    = (quote?.changePct ?? 0) < 0;
+
+  return (
+    <div
+      onClick={editMode ? undefined : onNavigate}
+      className={`flex items-center gap-3 p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] transition-colors ${editMode ? "" : "hover:bg-[var(--surface-2)] cursor-pointer active:scale-[0.99]"}`}
+    >
+      {/* Delete */}
+      {editMode && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="w-5 h-5 flex items-center justify-center rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 shrink-0"
+        >
+          <X size={10} strokeWidth={2.5} />
+        </button>
+      )}
+
+      {/* Icon */}
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold shrink-0 ${iconBgClass(item.type)}`}>
+        {isForex ? item.symbol.slice(0, 3) : ticker.slice(0, 2)}
+      </div>
+
+      {/* Name */}
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-sm leading-tight truncate">{ticker}</div>
+        <div className="text-[11px] text-[var(--muted)] truncate">{name}</div>
+      </div>
+
+      {/* Price + change */}
+      <div className="text-right shrink-0">
+        {quote ? (
+          <>
+            <div className="font-mono font-semibold text-sm">
+              {sym}{fmtPrice(quote.price, isForex)}
+            </div>
+            <div className={`font-mono text-xs ${colorClass(quote.changePct)}`}>
+              <span className="inline-flex items-center gap-0.5">
+                {up   && <TrendingUp   size={10} strokeWidth={2} />}
+                {down && <TrendingDown size={10} strokeWidth={2} />}
+                {!up && !down && <Minus size={10} strokeWidth={2} />}
+                {fmtPercent(quote.changePct)}
+              </span>
+            </div>
+          </>
+        ) : (
+          <span className="text-xs text-[var(--muted)] animate-pulse">…</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export default function MarketsPage() {
-  const { quotes, setActiveSymbol, lang } = useTradingStore();
+  const { quotes, lang, setActiveSymbol, marketLists, addToMarketList, removeFromMarketList, resetMarketList } = useTradingStore();
   const t = useT();
   const router = useRouter();
+
+  const [activeTab, setActiveTab] = useState<MarketTab>("stock");
+  const [editMode,  setEditMode]  = useState(false);
+  const [showAdd,   setShowAdd]   = useState(false);
+
+  const list = marketLists[activeTab] ?? [];
+  const m    = MARKET_META[activeTab];
 
   function goToTrade(symbol: string) {
     setActiveSymbol(symbol);
     router.push(`/trade/${symbol}`);
   }
 
-  const stocks  = DEFAULT_WATCHLIST.filter((w) => w.type === "stock");
-  const cryptos = DEFAULT_WATCHLIST.filter((w) => w.type === "crypto");
-  const hk      = DEFAULT_WATCHLIST.filter((w) => w.type === "hk");
-  const cn      = DEFAULT_WATCHLIST.filter((w) => w.type === "cn");
-
-  return (
-    <div className="p-4 md:p-6 flex flex-col gap-6 md:gap-8">
-      <div>
-        <h1 className="text-xl font-bold">{t.markets.title}</h1>
-        <p className="text-sm text-[var(--muted)] mt-0.5">{t.markets.subtitle}</p>
-      </div>
-
-      {/* ── Forex — pinned at top ─────────────────────────────────────── */}
-      <ForexSection quotes={quotes} onSelect={goToTrade} lang={lang} />
-
-      {/* ── Traditional markets ──────────────────────────────────────── */}
-      <AssetSection title={t.markets.usEquities}  items={stocks}  quotes={quotes} onSelect={goToTrade} lang={lang} />
-      <AssetSection title={t.markets.mainlandCN}  items={cn}      quotes={quotes} onSelect={goToTrade} lang={lang} />
-      <AssetSection title={t.markets.chinaHK}     items={hk}      quotes={quotes} onSelect={goToTrade} lang={lang} />
-      <AssetSection title={t.markets.crypto}      items={cryptos} quotes={quotes} onSelect={goToTrade} lang={lang} />
-    </div>
-  );
-}
-
-// ── ForexSection ──────────────────────────────────────────────────────────
-
-function ForexSection({
-  quotes, onSelect, lang,
-}: {
-  quotes: Record<string, Quote>;
-  onSelect: (symbol: string) => void;
-  lang: string;
-}) {
-  const t = useT();
-
-  function FxRow({ entry, isLast }: { entry: FxEntry; isLast: boolean }) {
-    const q   = quotes[entry.symbol];
-    const up  = (q?.changePct ?? 0) >= 0;
-    const iconCls = BASE_COLOR[entry.base] ?? "bg-emerald-500/15 text-emerald-400";
-    const name    = lang === "zh" ? entry.nameCN : entry.name;
-
-    return (
-      <tr
-        onClick={() => onSelect(entry.symbol)}
-        className={`${isLast ? "" : "border-b border-[var(--border)]"} hover:bg-[var(--surface-2)] cursor-pointer transition-colors`}
-      >
-        {/* Pair cell */}
-        <td className="px-5 py-3.5">
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${iconCls}`}>
-              {entry.base}
-            </div>
-            <div>
-              <div className="font-semibold">{entry.base}/{entry.quote}</div>
-              <div className="text-xs text-[var(--muted)]">{name}</div>
-            </div>
-            <Badge variant="emerald" className="ml-1">FX</Badge>
-          </div>
-        </td>
-
-        {q ? (
-          <>
-            {/* Rate */}
-            <td className="px-5 py-3.5 text-right font-mono font-semibold">
-              {fmtRate(q.price)}
-            </td>
-            {/* Change */}
-            <td className={`px-5 py-3.5 text-right font-mono ${colorClass(q.changePct)}`}>
-              <span className="flex items-center justify-end gap-1">
-                {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                {fmtPercent(q.changePct)}
-              </span>
-            </td>
-            {/* High */}
-            <td className="px-5 py-3.5 text-right font-mono text-[var(--muted)]">
-              {fmtRate(q.high)}
-            </td>
-            {/* Low */}
-            <td className="px-5 py-3.5 text-right font-mono text-[var(--muted)]">
-              {fmtRate(q.low)}
-            </td>
-            {/* Volume — not meaningful for FX */}
-            <td className="px-5 py-3.5 text-right font-mono text-[var(--muted)]/40">—</td>
-          </>
-        ) : (
-          <td colSpan={5} className="px-5 py-3.5 text-right text-xs text-[var(--muted)] animate-pulse">
-            {t.forexPanel.loading}
-          </td>
-        )}
-      </tr>
-    );
+  function switchTab(tab: MarketTab) {
+    setActiveTab(tab);
+    setEditMode(false);
   }
 
-  const allPairs = [...CNY_PAIRS, ...MAJOR_PAIRS];
+  function handleReset() {
+    if (confirm(`将${m.labelZh}列表恢复为默认？`)) resetMarketList(activeTab);
+  }
+
+  // Overrides for AddAssetModal — adds to this market's list, not global watchlist
+  const listSet = new Set(list.map((w) => w.symbol));
+  function handleAdd(item: WatchlistItem) {
+    addToMarketList(activeTab, { ...item, type: activeTab });
+  }
+  function handleRemoveViaModal(symbol: string) {
+    removeFromMarketList(activeTab, symbol);
+  }
+
+  const TABLE_HEADERS = [
+    { label: t.table.asset,        cls: "text-left" },
+    { label: lang === "zh" ? "价格" : "Price",    cls: "text-right" },
+    { label: t.markets.change24h,  cls: "text-right" },
+    { label: t.table.high,         cls: "text-right hidden md:table-cell" },
+    { label: t.table.low,          cls: "text-right hidden md:table-cell" },
+    { label: t.markets.volume,     cls: "text-right hidden lg:table-cell" },
+  ];
 
   return (
-    <section>
-      {/* Section header with emerald accent */}
-      <div className="flex items-center gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider">
-          {t.markets.forex}
-        </h2>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-          {lang === "zh" ? "人民币汇率 · 主要货币对" : "CNY Rates · Major Pairs"}
-        </span>
+    <div className="flex flex-col min-h-0 h-full">
+      {/* ── Header ── */}
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-0 shrink-0">
+        <div className="flex items-start justify-between mb-4 gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">{t.markets.title}</h1>
+            <p className="text-xs md:text-sm text-[var(--muted)] mt-0.5">{t.markets.subtitle}</p>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            {editMode && (
+              <button
+                onClick={handleReset}
+                title={lang === "zh" ? "重置默认" : "Reset defaults"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] border border-[var(--border)] text-xs font-medium transition-colors"
+              >
+                <RotateCcw size={12} />
+                <span className="hidden sm:inline">{lang === "zh" ? "重置" : "Reset"}</span>
+              </button>
+            )}
+            <button
+              onClick={() => setEditMode((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                editMode
+                  ? "border-transparent text-white"
+                  : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]"
+              }`}
+              style={editMode ? { backgroundColor: m.color } : {}}
+            >
+              {editMode ? <Check size={12} /> : <Pencil size={12} />}
+              {editMode ? (lang === "zh" ? "完成" : "Done") : (lang === "zh" ? "编辑" : "Edit")}
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors hover:opacity-90"
+              style={{ backgroundColor: `${m.color}20`, borderColor: `${m.color}50`, color: m.color }}
+            >
+              <Plus size={12} strokeWidth={2.5} />
+              {lang === "zh" ? "添加" : "Add"}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Market tabs ── */}
+        <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hide">
+          {TABS.map((tab) => {
+            const tm     = MARKET_META[tab];
+            const active = activeTab === tab;
+            const count  = (marketLists[tab] ?? []).length;
+            return (
+              <button
+                key={tab}
+                onClick={() => switchTab(tab)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition-all shrink-0"
+                style={
+                  active
+                    ? { backgroundColor: tm.color, borderColor: tm.color, color: "#fff" }
+                    : { backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--muted)" }
+                }
+              >
+                {lang === "zh" ? tm.labelZh : tm.labelEn}
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
+                  style={
+                    active
+                      ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
+                      : { backgroundColor: "var(--border)", color: "var(--muted)" }
+                  }
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <Card className="p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)] text-xs text-[var(--muted)] uppercase tracking-wide">
-              {[t.markets.pair, t.markets.rate, t.markets.change24h, t.table.high, t.table.low, t.markets.volume].map((h, i) => (
-                <th key={i} className={`px-5 py-3 font-medium ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
-              ))}
-            </tr>
-          </thead>
+      {/* ── Content ── */}
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-6">
+        {/* Section label */}
+        <div className="flex items-center gap-2 mb-3 pt-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
+          <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">
+            {lang === "zh" ? m.labelZh : m.labelEn}
+          </span>
+          <span className="text-xs text-[var(--muted)]/50">· {list.length} {lang === "zh" ? "支" : "symbols"}</span>
+        </div>
 
-          {/* CNY Rates sub-group */}
-          <tbody>
-            <tr>
-              <td colSpan={6} className="px-5 pt-3 pb-1">
-                <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">
-                  {t.forexPanel.cnyRates}
-                </span>
-              </td>
-            </tr>
-            {CNY_PAIRS.map((e, i) => (
-              <FxRow key={e.symbol} entry={e} isLast={i === CNY_PAIRS.length - 1} />
-            ))}
-          </tbody>
-
-          {/* Major crosses sub-group */}
-          <tbody>
-            <tr className="border-t border-[var(--border)]">
-              <td colSpan={6} className="px-5 pt-3 pb-1">
-                <span className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-widest">
-                  {t.forexPanel.majorPairs}
-                </span>
-              </td>
-            </tr>
-            {MAJOR_PAIRS.map((e, i) => (
-              <FxRow key={e.symbol} entry={e} isLast={i === MAJOR_PAIRS.length - 1} />
-            ))}
-          </tbody>
-        </table>
-      </Card>
-    </section>
-  );
-}
-
-// ── AssetSection (unchanged) ──────────────────────────────────────────────
-
-function AssetSection({
-  title, items, quotes, onSelect, lang,
-}: {
-  title: string;
-  items: typeof DEFAULT_WATCHLIST;
-  quotes: Record<string, Quote>;
-  onSelect: (symbol: string) => void;
-  lang: string;
-}) {
-  const t = useT();
-
-  if (items.length === 0) return null;
-
-  return (
-    <section>
-      <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">{title}</h2>
-      <Card className="p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)] text-xs text-[var(--muted)] uppercase tracking-wide">
-              {[t.table.asset, t.table.current, t.markets.change24h, t.table.high, t.table.low, t.markets.volume].map((h, i) => (
-                <th key={i} className={`px-5 py-3 font-medium ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const q    = quotes[item.symbol];
-              const meta = ASSET_META[item.symbol];
-              const up   = (q?.changePct ?? 0) >= 0;
-              const sym  = currencySymbol(meta?.currency ?? "USD");
-              const ticker = item.symbol.replace("USDT","").replace(/^HK/,"");
-              const name   = lang === "zh" && meta?.nameCN ? meta.nameCN : (meta?.name ?? item.name);
-              const badgeVariant = item.type === "crypto" ? "purple" : item.type === "hk" ? "yellow" : item.type === "cn" ? "cn" : "default";
-              const badgeLabel   = item.type === "crypto" ? t.badge.crypto : item.type === "hk" ? t.badge.hk : item.type === "cn" ? t.badge.cn : t.badge.stock;
-              const iconBg = item.type === "crypto"
-                ? "bg-[rgba(188,140,255,0.15)] text-[var(--purple)]"
-                : item.type === "hk"
-                ? "bg-[rgba(255,160,0,0.15)] text-[var(--yellow)]"
-                : item.type === "cn"
-                ? "bg-[rgba(248,81,73,0.10)] text-[#ff6b6b]"
-                : "bg-[rgba(88,166,255,0.15)] text-[var(--accent)]";
-
-              return (
-                <tr
-                  key={item.symbol}
-                  onClick={() => onSelect(item.symbol)}
-                  className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] cursor-pointer transition-colors"
+        {/* ── Desktop / tablet: table ── */}
+        <div className="hidden sm:block">
+          <Card className="p-0 overflow-hidden">
+            {list.length === 0 ? (
+              <div className="py-16 text-center text-[var(--muted)] text-sm">
+                <p className="opacity-50 mb-3">
+                  {lang === "zh" ? "暂无股票，点击「添加」开始" : "No symbols. Click Add to start."}
+                </p>
+                <button
+                  onClick={() => setShowAdd(true)}
+                  className="text-xs font-semibold px-4 py-2 rounded-lg border transition-colors hover:opacity-80"
+                  style={{ borderColor: `${m.color}50`, color: m.color, backgroundColor: `${m.color}10` }}
                 >
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${iconBg}`}>
-                        {ticker.slice(0, 2)}
-                      </div>
-                      <div>
-                        <div className="font-semibold">{ticker}</div>
-                        <div className="text-xs text-[var(--muted)]">{name}</div>
-                      </div>
-                      <Badge variant={badgeVariant} className="ml-1">{badgeLabel}</Badge>
-                    </div>
-                  </td>
-                  {q ? (
-                    <>
-                      <td className="px-5 py-4 text-right font-mono font-semibold">
-                        {sym}{q.price.toLocaleString("en-US", { minimumFractionDigits: q.price < 10 ? 4 : 2, maximumFractionDigits: q.price < 10 ? 4 : 2 })}
-                      </td>
-                      <td className={`px-5 py-4 text-right font-mono ${colorClass(q.changePct)}`}>
-                        <span className="flex items-center justify-end gap-1">
-                          {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                          {fmtPercent(q.changePct)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono text-[var(--muted)]">
-                        {sym}{q.high.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono text-[var(--muted)]">
-                        {sym}{q.low.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono text-[var(--muted)]">{fmtLarge(q.volume)}</td>
-                    </>
-                  ) : (
-                    <td colSpan={5} className="px-5 py-4 text-right text-xs text-[var(--muted)] animate-pulse">
-                      {t.forexPanel.loading}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
-    </section>
+                  + {lang === "zh" ? "添加" : "Add symbol"}
+                </button>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-[10px] text-[var(--muted)] uppercase tracking-wide">
+                    {TABLE_HEADERS.map((h, i) => (
+                      <th key={i} className={`px-4 md:px-5 py-3 font-medium ${h.cls}`}>{h.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((item) => (
+                    <TableRow
+                      key={item.symbol}
+                      item={item}
+                      quote={quotes[item.symbol]}
+                      editMode={editMode}
+                      lang={lang}
+                      onRemove={() => removeFromMarketList(activeTab, item.symbol)}
+                      onNavigate={() => goToTrade(item.symbol)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </div>
+
+        {/* ── Mobile: cards ── */}
+        <div className="sm:hidden space-y-2">
+          {list.length === 0 ? (
+            <div className="py-16 text-center text-[var(--muted)] text-sm">
+              <p className="opacity-50 mb-3">
+                {lang === "zh" ? "暂无股票，点击「添加」开始" : "No symbols. Tap Add to start."}
+              </p>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="text-xs font-semibold px-4 py-2 rounded-lg border"
+                style={{ borderColor: `${m.color}50`, color: m.color, backgroundColor: `${m.color}10` }}
+              >
+                + {lang === "zh" ? "添加" : "Add"}
+              </button>
+            </div>
+          ) : (
+            list.map((item) => (
+              <MobileCard
+                key={item.symbol}
+                item={item}
+                quote={quotes[item.symbol]}
+                editMode={editMode}
+                lang={lang}
+                onRemove={() => removeFromMarketList(activeTab, item.symbol)}
+                onNavigate={() => goToTrade(item.symbol)}
+              />
+            ))
+          )}
+        </div>
+
+        {/* ── Add row (always visible) ── */}
+        {list.length > 0 && (
+          <button
+            onClick={() => setShowAdd(true)}
+            className="w-full mt-3 flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed text-sm font-semibold transition-colors hover:opacity-80"
+            style={{ borderColor: `${m.color}50`, color: m.color, backgroundColor: `${m.color}08` }}
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            {lang === "zh" ? `添加${m.labelZh}股票` : `Add ${m.labelEn} symbol`}
+          </button>
+        )}
+      </div>
+
+      {/* ── AddAssetModal ── */}
+      {showAdd && (
+        <AddAssetModal
+          onClose={() => setShowAdd(false)}
+          overrideSymbols={listSet}
+          onAddOverride={handleAdd}
+          onRemoveOverride={handleRemoveViaModal}
+        />
+      )}
+    </div>
   );
 }

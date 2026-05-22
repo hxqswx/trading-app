@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { SessionProvider } from "next-auth/react";
-import type { Session } from "next-auth";
 import { useSimulator } from "@/lib/hooks/use-simulator";
 import { useAlpacaStream } from "@/lib/hooks/use-alpaca-stream";
 import { useTradingStore } from "@/lib/store";
@@ -30,18 +28,18 @@ function RuntimeHooks() {
 
 interface ProvidersProps {
   children: React.ReactNode;
-  /** Server-resolved session — passed to SessionProvider to avoid a client fetch */
-  session: Session | null;
+  /** Whether the user is authenticated (resolved server-side) */
+  isAuthed: boolean;
 }
 
-export function Providers({ children, session }: ProvidersProps) {
+export function Providers({ children, isAuthed }: ProvidersProps) {
   return (
-    <SessionProvider session={session}>
+    <>
       {/* Theme is applied regardless of auth state */}
       <ThemeApplier />
       {/* Simulator only runs inside the authenticated shell */}
-      {session && <RuntimeHooks />}
+      {isAuthed && <RuntimeHooks />}
       {children}
-    </SessionProvider>
+    </>
   );
 }
