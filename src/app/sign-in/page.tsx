@@ -408,6 +408,8 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
       <PwField label="Confirm password" value={pw2} onChange={setPw2}
         autoComplete="new-password" placeholder="Repeat your password" />
       {error && <Err msg={error} />}
+      {/* Required by Clerk bot-protection for custom sign-up flows */}
+      <div id="clerk-captcha" />
       <SubmitBtn pending={pending} label="Create account" />
       <p className="text-center text-[10px] text-white/30">Paper trading only · no real funds at risk</p>
     </form>
