@@ -14,14 +14,16 @@
       "android": { "buildType": "apk" },
       "ios": { "simulator": false },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://trading-app-khaki-three.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://trading-app-khaki-three.vercel.app",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c2VsZWN0LWZpbmNoLTg5LmNsZXJrLmFjY291bnRzLmRldiQ"
       }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
       "ios": { "buildConfiguration": "Release" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://trading-app-khaki-three.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://trading-app-khaki-three.vercel.app",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c2VsZWN0LWZpbmNoLTg5LmNsZXJrLmFjY291bnRzLmRldiQ"
       }
     }
   },
