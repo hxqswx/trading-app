@@ -314,6 +314,43 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
   // Email-verification step
   const [verifying, setVerifying] = useState(false);
   const [code, setCode]           = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Countdown timer for resend button
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
+  // Auto-submit when 6 digits are entered
+  useEffect(() => {
+    if (!verifying || code.length !== 6 || pending || !isLoaded || !signUp || !setActive) return;
+    doVerify(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, verifying]);
+
+  async function doVerify(otp: string) {
+    if (!signUp || !setActive) return;
+    setError(null);
+    setPending(true);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code: otp });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        setDone(true);
+        setTimeout(() => { window.location.href = callbackUrl; }, 1200);
+      } else {
+        console.error("[verify] unexpected status:", result.status);
+        setError("Verification incomplete — please check the code and try again.");
+      }
+    } catch (err: unknown) {
+      console.error("[RegisterForm verify]", err);
+      setError(clerkMsg(err, "Invalid or expired code. Request a new one below."));
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -338,6 +375,7 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
         // Clerk requires email verification — send the code and show OTP input
         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
         setVerifying(true);
+        setResendCooldown(60);
       } else {
         setError("Unexpected sign-up status: " + result.status);
       }
@@ -349,23 +387,16 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
     }
   }
 
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
-    if (!isLoaded || !signUp || !setActive || pending) return;
+  async function resend() {
+    if (!signUp || resendCooldown > 0 || pending) return;
     setError(null);
     setPending(true);
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code });
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        setDone(true);
-        setTimeout(() => { window.location.href = callbackUrl; }, 1200);
-      } else {
-        setError("Verification incomplete — please check the code and try again.");
-      }
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setCode("");
+      setResendCooldown(60);
     } catch (err: unknown) {
-      console.error("[RegisterForm verify]", err);
-      setError(clerkMsg(err, "Invalid verification code."));
+      setError(clerkMsg(err, "Failed to resend code. Please try again."));
     } finally {
       setPending(false);
     }
@@ -382,16 +413,43 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
 
   // Email verification step — Clerk sent a one-time code
   if (verifying) return (
-    <form onSubmit={verify} className="space-y-4">
+    <div className="space-y-4">
       <div className="text-center space-y-1">
         <p className="text-sm font-semibold text-white">Check your email</p>
         <p className="text-xs text-white/40">We sent a 6-digit code to <span className="text-white/60">{email}</span></p>
+        <p className="text-[11px] text-white/30">It will auto-submit when all 6 digits are entered.</p>
       </div>
-      <Field label="Verification code" value={code} onChange={setCode}
-        placeholder="123456" icon={Mail} autoComplete="one-time-code" />
+      {/* Large centered OTP input */}
+      <div className="space-y-1.5">
+        <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest">Verification code</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={6}
+          value={code}
+          autoComplete="one-time-code"
+          autoFocus
+          placeholder="000000"
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          className="w-full h-14 rounded-xl border border-white/8 bg-white/5 text-center text-2xl font-mono font-bold text-white tracking-[0.5em] placeholder:text-white/15 focus:outline-none focus:border-[#58a6ff]/60 focus:bg-white/8 transition-all"
+        />
+      </div>
       {error && <Err msg={error} />}
-      <SubmitBtn pending={pending} label="Verify email" />
-    </form>
+      <button
+        type="button"
+        onClick={() => { if (code.length === 6 && !pending) doVerify(code); }}
+        disabled={pending || code.length < 6}
+        className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#58a6ff] text-white hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#58a6ff]/25">
+        {pending ? <><Spinner />Verifying…</> : <>Verify email <ArrowRight size={14} /></>}
+      </button>
+      <div className="text-center">
+        <button type="button" onClick={resend} disabled={resendCooldown > 0 || pending}
+          className="text-[11px] text-white/30 hover:text-[#58a6ff] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive it? Resend code"}
+        </button>
+      </div>
+    </div>
   );
 
   return (
