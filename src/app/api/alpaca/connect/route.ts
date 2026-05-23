@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   requireUser,
-  getUserCash,
   UnauthorizedError,
   NoDatabaseError,
 } from "@/lib/user-account";
@@ -37,6 +36,12 @@ function maskKey(key: string): string {
   return key.slice(0, 4) + "****" + key.slice(-4);
 }
 
+/** Always returns JSON — never lets an exception bubble to Next.js HTML handler. */
+function serverErr(msg: string, status = 500) {
+  console.error("[/api/alpaca/connect]", msg);
+  return NextResponse.json({ error: msg }, { status });
+}
+
 // ── GET ────────────────────────────────────────────────────────────────────
 
 export async function GET() {
@@ -46,9 +51,9 @@ export async function GET() {
   try {
     ({ userId, sql } = await requireUser());
   } catch (err) {
-    if (err instanceof UnauthorizedError)  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (err instanceof NoDatabaseError)    return NextResponse.json({ connected: false });
-    throw err;
+    if (err instanceof UnauthorizedError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (err instanceof NoDatabaseError)   return NextResponse.json({ connected: false });
+    return serverErr(`requireUser failed: ${String(err)}`);
   }
 
   try {
@@ -58,7 +63,7 @@ export async function GET() {
       return NextResponse.json({ connected: false });
     }
 
-    // Try a quick account call to confirm keys still work
+    // Quick ping to confirm keys still work
     try {
       const acct = await getAlpacaAccountForUser(keyId, secretKey);
       return NextResponse.json({
@@ -67,16 +72,16 @@ export async function GET() {
         equity:      acct.equity,
         cash:        acct.cash,
       });
-    } catch {
-      // Keys stored but invalid
+    } catch (alpacaErr) {
+      // Keys stored but invalid / Alpaca unreachable
       return NextResponse.json({
         connected:   false,
         maskedKeyId: maskKey(keyId),
-        error:       "Keys saved but Alpaca returned an error — please reconnect.",
+        error:       `Saved keys rejected by Alpaca — please reconnect. (${String(alpacaErr)})`,
       });
     }
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return serverErr(`GET error: ${String(err)}`);
   }
 }
 
@@ -89,9 +94,9 @@ export async function POST(req: NextRequest) {
   try {
     ({ userId, sql } = await requireUser());
   } catch (err) {
-    if (err instanceof UnauthorizedError)  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (err instanceof NoDatabaseError)    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-    throw err;
+    if (err instanceof UnauthorizedError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (err instanceof NoDatabaseError)   return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+    return serverErr(`requireUser failed: ${String(err)}`);
   }
 
   let body: { keyId?: string; secretKey?: string };
@@ -103,37 +108,52 @@ export async function POST(req: NextRequest) {
 
   const { keyId, secretKey } = body;
   if (!keyId?.trim() || !secretKey?.trim()) {
-    return NextResponse.json({ error: "keyId and secretKey are required" }, { status: 400 });
+    return NextResponse.json({ error: "Both Key ID and Secret Key are required." }, { status: 400 });
   }
 
-  // Verify keys work before saving
+  const kid = keyId.trim();
+  const sec = secretKey.trim();
+
+  // ── 1. Test keys against Alpaca live ──────────────────────────────────────
+  let acct: Awaited<ReturnType<typeof getAlpacaAccountForUser>>;
   try {
-    const acct = await getAlpacaAccountForUser(keyId.trim(), secretKey.trim());
-
-    // Save to settings
-    await sql`
-      INSERT INTO settings (user_id, key, value)
-      VALUES (${userId}, 'alpaca_key_id', ${keyId.trim()})
-      ON CONFLICT (user_id, key) DO UPDATE SET value = ${keyId.trim()}
-    `;
-    await sql`
-      INSERT INTO settings (user_id, key, value)
-      VALUES (${userId}, 'alpaca_secret_key', ${secretKey.trim()})
-      ON CONFLICT (user_id, key) DO UPDATE SET value = ${secretKey.trim()}
-    `;
-
-    return NextResponse.json({
-      connected:   true,
-      maskedKeyId: maskKey(keyId.trim()),
-      equity:      acct.equity,
-      cash:        acct.cash,
-    });
+    acct = await getAlpacaAccountForUser(kid, sec);
   } catch (err) {
-    return NextResponse.json(
-      { error: `Could not connect to Alpaca: ${String(err)}` },
-      { status: 422 },
-    );
+    // Surface the real Alpaca error (e.g. "Alpaca 403: request is not authorized")
+    const raw   = String(err);
+    const clean = raw.replace(/^Error:\s*/, "").replace(/Alpaca \d+:\s*/, "").trim();
+    let friendly: string;
+    try {
+      const parsed = JSON.parse(clean.slice(clean.indexOf("{")));
+      friendly = parsed.message ?? clean;
+    } catch {
+      friendly = clean || "Could not reach Alpaca — check your keys and try again.";
+    }
+    return NextResponse.json({ error: `Alpaca rejected the keys: ${friendly}` }, { status: 422 });
   }
+
+  // ── 2. Save keys to DB ────────────────────────────────────────────────────
+  try {
+    await sql`
+      INSERT INTO settings (user_id, key, value)
+      VALUES (${userId}, 'alpaca_key_id', ${kid})
+      ON CONFLICT (user_id, key) DO UPDATE SET value = ${kid}
+    `;
+    await sql`
+      INSERT INTO settings (user_id, key, value)
+      VALUES (${userId}, 'alpaca_secret_key', ${sec})
+      ON CONFLICT (user_id, key) DO UPDATE SET value = ${sec}
+    `;
+  } catch (err) {
+    return serverErr(`Failed to save keys: ${String(err)}`);
+  }
+
+  return NextResponse.json({
+    connected:   true,
+    maskedKeyId: maskKey(kid),
+    equity:      acct.equity,
+    cash:        acct.cash,
+  });
 }
 
 // ── DELETE ─────────────────────────────────────────────────────────────────
@@ -145,9 +165,9 @@ export async function DELETE() {
   try {
     ({ userId, sql } = await requireUser());
   } catch (err) {
-    if (err instanceof UnauthorizedError)  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (err instanceof NoDatabaseError)    return NextResponse.json({ ok: true });
-    throw err;
+    if (err instanceof UnauthorizedError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (err instanceof NoDatabaseError)   return NextResponse.json({ connected: false });
+    return serverErr(`requireUser failed: ${String(err)}`);
   }
 
   try {
@@ -157,6 +177,6 @@ export async function DELETE() {
     `;
     return NextResponse.json({ connected: false });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return serverErr(`DELETE error: ${String(err)}`);
   }
 }

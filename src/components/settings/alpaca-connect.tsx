@@ -78,27 +78,40 @@ export function AlpacaConnect() {
       return;
     }
     setStatus({ state: "testing" });
+
+    let res: Response;
     try {
-      const res  = await fetch("/api/alpaca/connect", {
+      res = await fetch("/api/alpaca/connect", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ keyId: keyId.trim(), secretKey: secret.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.connected) {
-        setStatus({ state: "form", error: data.error ?? "Failed to connect." });
-        return;
-      }
-      setStatus({
-        state:       "connected",
-        maskedKeyId: data.maskedKeyId,
-        equity:      data.equity,
-        cash:        data.cash,
-      });
-      setKeyId(""); setSecret("");
-    } catch {
-      setStatus({ state: "form", error: "Network error — please try again." });
+    } catch (err) {
+      setStatus({ state: "form", error: `Could not reach server: ${err instanceof Error ? err.message : String(err)}` });
+      return;
     }
+
+    // Parse JSON — server always returns JSON now; guard against HTML 500 fallback
+    let data: Record<string, unknown>;
+    try {
+      data = await res.json();
+    } catch {
+      setStatus({ state: "form", error: `Server error (HTTP ${res.status}) — check Vercel logs for details.` });
+      return;
+    }
+
+    if (!res.ok || !data.connected) {
+      setStatus({ state: "form", error: (data.error as string | undefined) ?? `HTTP ${res.status} — failed to connect.` });
+      return;
+    }
+
+    setStatus({
+      state:       "connected",
+      maskedKeyId: data.maskedKeyId as string,
+      equity:      data.equity as string,
+      cash:        data.cash as string,
+    });
+    setKeyId(""); setSecret("");
   }
 
   // ── Disconnect ────────────────────────────────────────────────────────────
