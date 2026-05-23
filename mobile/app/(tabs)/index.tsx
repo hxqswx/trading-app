@@ -135,12 +135,12 @@ export default function DashboardScreen() {
   const gainers = [...allQuotes]
     .filter((q) => q.changePct > 0)
     .sort((a, b) => b.changePct - a.changePct)
-    .slice(0, 6);
+    .slice(0, 10);
 
   const losers = [...allQuotes]
     .filter((q) => q.changePct < 0)
     .sort((a, b) => a.changePct - b.changePct)
-    .slice(0, 6);
+    .slice(0, 10);
 
   const movers = tab === "gainers" ? gainers : losers;
 

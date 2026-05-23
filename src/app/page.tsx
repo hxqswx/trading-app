@@ -171,8 +171,8 @@ function TopMovers() {
   const [tab, setTab] = useState<"gainers" | "losers">("gainers");
 
   const allQuotes = Object.values(quotes);
-  const gainers = allQuotes.filter(q => q.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 8);
-  const losers  = allQuotes.filter(q => q.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 8);
+  const gainers = allQuotes.filter(q => q.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 10);
+  const losers  = allQuotes.filter(q => q.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 10);
   const list    = tab === "gainers" ? gainers : losers;
   const loading = allQuotes.length === 0;
 
