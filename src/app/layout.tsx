@@ -29,7 +29,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isAuthed = !!userId;
 
   return (
-    <ClerkProvider>
+    <ClerkProvider
+        signInUrl="/sign-in"
+        signUpUrl="/sign-in"
+        signInFallbackRedirectUrl="/"
+        signUpFallbackRedirectUrl="/"
+      >
       <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
         <body className="h-full flex bg-[var(--background)]">
           {/*

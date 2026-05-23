@@ -42,7 +42,10 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // ── All other page routes — require authentication ────────────────────────
-  await auth.protect();
+  // Pass unauthenticatedUrl so Clerk redirects to our custom page, not its hosted UI
+  await auth.protect({
+    unauthenticatedUrl: new URL("/sign-in", req.url).href,
+  });
 });
 
 // Run on everything except Next.js internals and static assets
