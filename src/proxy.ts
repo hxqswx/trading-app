@@ -1,37 +1,53 @@
 /**
- * Next.js Proxy — Clerk middleware runs on all routes so auth() works everywhere.
+ * Next.js Proxy — Clerk middleware.
  *
- * Public routes: /sign-in and all /api/* routes (APIs handle their own 401s).
- * Page routes that aren't public redirect to /sign-in if unauthenticated.
+ * KEY RULE: auth() must be called inside clerkMiddleware for EVERY request
+ * that will later call auth() in a route handler or server component.
+ * Returning early without calling auth() leaves no session headers on the
+ * request, so downstream auth() calls throw "can't detect clerkMiddleware".
+ *
+ * Strategy:
+ *  - API routes  → call auth() to attach session context; never protect()
+ *  - /sign-in    → call auth(); if logged-in redirect to /
+ *  - /sso-callback → call auth() (Clerk handles the token exchange)
+ *  - everything else → auth.protect() (redirects to /sign-in if unauthed)
  */
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// Routes that don't require a redirect — API routes return 401 themselves
-const isPublicRoute = createRouteMatcher([
-  "/sign-in(.*)",
-  "/sso-callback(.*)",   // OAuth provider redirect-back target
-  "/api/(.*)",
-]);
+const isApiRoute      = createRouteMatcher(["/api/(.*)"]);
+const isSignInRoute   = createRouteMatcher(["/sign-in(.*)"]);
+const isCallbackRoute = createRouteMatcher(["/sso-callback(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isPublicRoute(req)) {
-    // For /sign-in: redirect away if already logged in
-    if (req.nextUrl.pathname.startsWith("/sign-in")) {
-      const { userId } = await auth();
-      if (userId) return NextResponse.redirect(new URL("/", req.url));
-    }
-    // API routes and sign-in: let through (no protect())
+  // ── API routes ────────────────────────────────────────────────────────────
+  // Always call auth() so Clerk attaches session headers to the request.
+  // Do NOT call auth.protect() — route handlers return 401 themselves.
+  if (isApiRoute(req)) {
+    await auth();   // ← attaches session context; does NOT redirect
     return;
   }
 
-  // All other page routes — Clerk redirects to /sign-in if unauthenticated
+  // ── OAuth callback ────────────────────────────────────────────────────────
+  if (isCallbackRoute(req)) {
+    await auth();
+    return;
+  }
+
+  // ── Sign-in page ──────────────────────────────────────────────────────────
+  if (isSignInRoute(req)) {
+    const { userId } = await auth();
+    if (userId) return NextResponse.redirect(new URL("/", req.url));
+    return;
+  }
+
+  // ── All other page routes — require authentication ────────────────────────
   await auth.protect();
 });
 
-// Run on everything except Next.js internals and static files
+// Run on everything except Next.js internals and static assets
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.svg$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.png$|.*\\.svg$).*)",
   ],
 };
