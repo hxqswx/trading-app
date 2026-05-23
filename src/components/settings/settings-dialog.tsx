@@ -9,9 +9,10 @@
  */
 import { useTradingStore } from "@/lib/store";
 import { useT } from "@/lib/hooks/use-t";
-import { X, Palette, TrendingUp, User, Info, ExternalLink } from "lucide-react";
+import { X, Palette, TrendingUp, User, Info } from "lucide-react";
 import { cn, fmtCurrency, fmtPercent, colorClass } from "@/lib/utils";
 import { useState } from "react";
+import { AlpacaConnect } from "@/components/settings/alpaca-connect";
 
 type Section = "appearance" | "trading" | "account" | "about";
 
@@ -186,16 +187,13 @@ function AccountSection() {
         </div>
       </div>
 
-      {/* Link to Alpaca */}
-      <a
-        href="https://app.alpaca.markets/paper/dashboard/overview"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)] transition-colors"
-      >
-        <ExternalLink size={13} />
-        {t.settings.accountManage}
-      </a>
+      {/* Alpaca account linking */}
+      <div className="pt-2 border-t border-[var(--border)]">
+        <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">
+          Alpaca API Connection
+        </p>
+        <AlpacaConnect />
+      </div>
     </div>
   );
 }

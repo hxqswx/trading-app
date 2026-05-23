@@ -92,6 +92,79 @@ export interface AlpacaPosition {
   cost_basis:      string;
 }
 
+// ── Per-user key helpers ───────────────────────────────────────────────────
+
+/** Build headers from explicit key/secret (for per-user linked accounts). */
+export function alpacaHeadersForKeys(keyId: string, secretKey: string): Record<string, string> {
+  return {
+    "APCA-API-KEY-ID":     keyId,
+    "APCA-API-SECRET-KEY": secretKey,
+    "Content-Type":        "application/json",
+    "Accept":              "application/json",
+  };
+}
+
+async function alpacaFetchWithKeys<T>(
+  url: string,
+  keyId: string,
+  secretKey: string,
+  opts?: RequestInit,
+): Promise<T> {
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      ...alpacaHeadersForKeys(keyId, secretKey),
+      ...((opts?.headers as Record<string, string>) ?? {}),
+    },
+    cache:  "no-store",
+    signal: opts?.signal ?? AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Alpaca ${res.status}: ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export function getAlpacaAccountForUser(keyId: string, secretKey: string): Promise<AlpacaAccount> {
+  return alpacaFetchWithKeys<AlpacaAccount>(`${ALPACA_BASE_URL}/v2/account`, keyId, secretKey);
+}
+
+export function getAlpacaPositionsForUser(keyId: string, secretKey: string): Promise<AlpacaPosition[]> {
+  return alpacaFetchWithKeys<AlpacaPosition[]>(`${ALPACA_BASE_URL}/v2/positions`, keyId, secretKey);
+}
+
+export function submitAlpacaOrderForUser(
+  keyId: string,
+  secretKey: string,
+  order: {
+    symbol:       string;
+    qty:          number;
+    side:         "buy" | "sell";
+    type:         "market" | "limit" | "stop" | "stop_limit";
+    limit_price?: number;
+    stop_price?:  number;
+  },
+): Promise<AlpacaOrder> {
+  return alpacaFetchWithKeys<AlpacaOrder>(
+    `${ALPACA_BASE_URL}/v2/orders`,
+    keyId,
+    secretKey,
+    {
+      method: "POST",
+      body:   JSON.stringify({
+        symbol:        order.symbol,
+        qty:           String(order.qty),
+        side:          order.side,
+        type:          order.type,
+        time_in_force: "day",
+        ...(order.limit_price != null ? { limit_price: String(order.limit_price) } : {}),
+        ...(order.stop_price  != null ? { stop_price:  String(order.stop_price)  } : {}),
+      }),
+    },
+  );
+}
+
 // ── Broker / Trading endpoints ────────────────────────────────────────────
 
 /**
