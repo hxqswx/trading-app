@@ -27,6 +27,58 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fmtCurrency, fmtPercent, colorKey } from "@/lib/utils";
 import type { Quote } from "@/lib/types";
 
+// ── Asset-type metadata ────────────────────────────────────────────────────
+const TYPE_META: Record<string, { zh: string; en: string; color: string }> = {
+  stock:  { zh: "美股", en: "US",     color: "#58a6ff" },
+  crypto: { zh: "加密", en: "Crypto", color: "#bc8cff" },
+  hk:     { zh: "港股", en: "HK",     color: "#ffa000" },
+  cn:     { zh: "A股",  en: "A股",    color: "#ff6b6b" },
+  forex:  { zh: "外汇", en: "FX",     color: "#3fb950" },
+};
+
+function fmtK(v: number): string {
+  const a = Math.abs(v);
+  if (a >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
+  if (a >= 1_000)     return (v / 1_000).toFixed(1) + "K";
+  return v.toFixed(0);
+}
+
+function BreakdownRows({
+  data, lang, signed, borderColor,
+}: { data: Record<string, number>; lang: string; signed?: boolean; borderColor: string }) {
+  const entries = Object.entries(data).filter(([, v]) => Math.abs(v) >= 0.5);
+  if (!entries.length) return null;
+  return (
+    <View style={[breakdownStyles.container, { borderTopColor: borderColor + "40" }]}>
+      {entries.map(([type, v]) => {
+        const m   = TYPE_META[type] ?? { zh: type, en: type, color: "#8b949e" };
+        const neg = v < 0;
+        const col = signed ? (neg ? "#f85149" : "#3fb950") : "#8b949e";
+        return (
+          <View key={type} style={breakdownStyles.row}>
+            <View style={breakdownStyles.labelRow}>
+              <View style={[breakdownStyles.dot, { backgroundColor: m.color }]} />
+              <Text style={breakdownStyles.label}>{lang === "zh" ? m.zh : m.en}</Text>
+            </View>
+            <Text style={[breakdownStyles.value, { color: col }]}>
+              {signed && !neg ? "+" : ""}{fmtK(v)}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const breakdownStyles = StyleSheet.create({
+  container: { marginTop: 6, paddingTop: 6, borderTopWidth: StyleSheet.hairlineWidth, gap: 3 },
+  row:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  labelRow:  { flexDirection: "row", alignItems: "center", gap: 4 },
+  dot:       { width: 6, height: 6, borderRadius: 3 },
+  label:     { fontSize: 10, color: "#8b949e" },
+  value:     { fontSize: 10, fontFamily: "monospace", fontVariant: ["tabular-nums"] },
+});
+
 // ── Quote row (movers) ────────────────────────────────────────────────────
 
 function QuoteRow({ q }: { q: Quote }) {
@@ -124,11 +176,33 @@ function PositionRow({ pos }: {
 // ── Main screen ───────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
-  const colors   = useColors();
-  const t        = useT();
-  const lang     = useTradingStore((s) => s.lang);
+  const colors    = useColors();
+  const t         = useT();
+  const lang      = useTradingStore((s) => s.lang);
+  const storeQuotes = useTradingStore((s) => s.quotes);
   const allQuotes = useAllQuotes();
   const { portfolio, loading, refresh } = usePortfolio();
+
+  // ── Breakdowns ─────────────────────────────────────────────────────────────
+  const positions = portfolio?.positions ?? [];
+
+  const equityBreak = positions.reduce<Record<string, number>>((acc, p) => {
+    acc[p.type] = (acc[p.type] ?? 0) + p.marketValue;
+    return acc;
+  }, {});
+
+  const dayBreak = positions.reduce<Record<string, number>>((acc, p) => {
+    const q = storeQuotes[p.symbol];
+    if (!q || q.changePct === 0) return acc;
+    const prev = q.price / (1 + q.changePct / 100);
+    acc[p.type] = (acc[p.type] ?? 0) + p.qty * (q.price - prev);
+    return acc;
+  }, {});
+
+  const totalBreak = positions.reduce<Record<string, number>>((acc, p) => {
+    acc[p.type] = (acc[p.type] ?? 0) + p.unrealizedPnl;
+    return acc;
+  }, {});
   const [tab, setTab]      = useState<"gainers" | "losers">("gainers");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -157,11 +231,12 @@ export default function DashboardScreen() {
   const CARDS: Array<{
     label: string; icon: typeof DollarSign;
     value: number | undefined; color: string; bg: string; pct?: number;
+    breakdown?: Record<string, number>; signed?: boolean;
   }> = [
-    { label: t.portfolio.equity,   icon: DollarSign, value: portfolio?.equity,    color: colors.accent,     bg: colors.accent + "12" },
+    { label: t.portfolio.equity,   icon: DollarSign, value: portfolio?.equity,    color: colors.accent,     bg: colors.accent + "12",          breakdown: equityBreak, signed: false },
     { label: t.portfolio.cash,     icon: Wallet,      value: portfolio?.cash,      color: colors.muted,      bg: colors.surface2 },
-    { label: t.portfolio.dayPnl,   icon: TrendingUp,  value: portfolio?.dayPnl,    color: colors[dayPnlKey], bg: colors[dayPnlKey] + "12", pct: portfolio?.dayPnlPct },
-    { label: t.portfolio.totalPnl, icon: BarChart2,   value: portfolio?.totalPnl,  color: colors[totPnlKey], bg: colors[totPnlKey] + "12" },
+    { label: t.portfolio.dayPnl,   icon: TrendingUp,  value: portfolio?.dayPnl,    color: colors[dayPnlKey], bg: colors[dayPnlKey] + "12", pct: portfolio?.dayPnlPct, breakdown: dayBreak,   signed: true },
+    { label: t.portfolio.totalPnl, icon: BarChart2,   value: portfolio?.totalPnl,  color: colors[totPnlKey], bg: colors[totPnlKey] + "12",      breakdown: totalBreak,  signed: true },
   ];
 
   return (
@@ -195,7 +270,7 @@ export default function DashboardScreen() {
 
         {/* ── 4 Summary cards (2×2 grid) ── */}
         <View style={styles.cardGrid}>
-          {CARDS.map(({ label, icon: Icon, value, color, bg, pct }) => (
+          {CARDS.map(({ label, icon: Icon, value, color, bg, pct, breakdown, signed }) => (
             <View
               key={label}
               style={[styles.summaryCard, { backgroundColor: bg, borderColor: colors.border }]}
@@ -205,7 +280,11 @@ export default function DashboardScreen() {
                 <Text style={[styles.cardLabel, { color: colors.muted }]}>{label}</Text>
               </View>
               {loading && !portfolio ? (
-                <Skeleton height={20} width={80} style={{ marginTop: 6 }} />
+                <>
+                  <Skeleton height={20} width={80} style={{ marginTop: 6 }} />
+                  <Skeleton height={10} width={60} style={{ marginTop: 8 }} />
+                  <Skeleton height={10} width={50} style={{ marginTop: 3 }} />
+                </>
               ) : (
                 <>
                   <Text style={[styles.cardValue, { color }]}>
@@ -213,6 +292,14 @@ export default function DashboardScreen() {
                   </Text>
                   {pct !== undefined && value !== undefined && (
                     <Text style={[styles.cardPct, { color }]}>{fmtPercent(pct)}</Text>
+                  )}
+                  {breakdown && (
+                    <BreakdownRows
+                      data={breakdown}
+                      lang={lang}
+                      signed={signed}
+                      borderColor={colors.border}
+                    />
                   )}
                 </>
               )}

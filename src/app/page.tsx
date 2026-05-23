@@ -52,29 +52,127 @@ function Greeting() {
   );
 }
 
+// ── Asset-type metadata for breakdown display ──────────────────────────────
+const TYPE_META: Record<string, { zh: string; en: string; color: string }> = {
+  stock:  { zh: "美股", en: "US",     color: "#58a6ff" },
+  crypto: { zh: "加密", en: "Crypto", color: "#bc8cff" },
+  hk:     { zh: "港股", en: "HK",     color: "#ffa000" },
+  cn:     { zh: "A股",  en: "A股",    color: "#ff6b6b" },
+  forex:  { zh: "外汇", en: "FX",     color: "#3fb950" },
+};
+
+function fmtK(v: number): string {
+  const a = Math.abs(v);
+  if (a >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
+  if (a >= 1_000)     return (v / 1_000).toFixed(1) + "K";
+  return v.toFixed(0);
+}
+
+function BreakdownDots({
+  data, lang, signed,
+}: { data: Record<string, number>; lang: string; signed?: boolean }) {
+  const entries = Object.entries(data).filter(([, v]) => Math.abs(v) >= 0.5);
+  if (!entries.length) return null;
+  return (
+    <div className="mt-2 pt-2 border-t border-[var(--border)] flex flex-col gap-0.5">
+      {entries.map(([type, v]) => {
+        const m   = TYPE_META[type] ?? { zh: type, en: type, color: "#8b949e" };
+        const neg = v < 0;
+        const col = signed ? (neg ? "var(--red)" : "var(--green)") : "var(--muted)";
+        return (
+          <div key={type} className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: m.color }} />
+              <span className="text-[10px] text-[var(--muted)]">{lang === "zh" ? m.zh : m.en}</span>
+            </div>
+            <span className="text-[10px] font-mono tabular-nums shrink-0" style={{ color: col }}>
+              {signed && !neg ? "+" : ""}{fmtK(v)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SummaryCards() {
   const { portfolio, loading } = usePortfolio();
+  const { lang, quotes } = useTradingStore();
   const t = useT();
-  const stats = [
-    { label: t.portfolio.equity,  icon: DollarSign, value: portfolio?.equity,   color: "text-[var(--accent)]",  bg: "bg-[rgba(88,166,255,0.08)]", pct: undefined },
-    { label: t.portfolio.cash,    icon: Wallet,      value: portfolio?.cash,    color: "text-[var(--muted)]",   bg: "bg-[var(--surface-2)]",       pct: undefined },
-    { label: t.portfolio.dayPnl,  icon: TrendingUp,  value: portfolio?.dayPnl,  color: colorClass(portfolio?.dayPnl ?? 0), bg: "bg-[var(--surface-2)]", pct: portfolio?.dayPnlPct },
-    { label: t.portfolio.totalPnl,icon: BarChart2,   value: portfolio?.totalPnl,color: colorClass(portfolio?.totalPnl ?? 0),bg: "bg-[var(--surface-2)]", pct: undefined },
+
+  const positions = portfolio?.positions ?? [];
+
+  // ── Equity breakdown: market value by type ────────────────────────────────
+  const equityBreak = positions.reduce<Record<string, number>>((acc, p) => {
+    acc[p.type] = (acc[p.type] ?? 0) + p.marketValue;
+    return acc;
+  }, {});
+
+  // ── Day P&L breakdown: use live quotes changePct × qty ────────────────────
+  const dayBreak = positions.reduce<Record<string, number>>((acc, p) => {
+    const q = quotes[p.symbol];
+    if (!q || q.changePct === 0) return acc;
+    const prevClose = q.price / (1 + q.changePct / 100);
+    acc[p.type] = (acc[p.type] ?? 0) + p.qty * (q.price - prevClose);
+    return acc;
+  }, {});
+
+  // ── Total P&L breakdown: unrealizedPnl by type ────────────────────────────
+  const totalBreak = positions.reduce<Record<string, number>>((acc, p) => {
+    acc[p.type] = (acc[p.type] ?? 0) + p.unrealizedPnl;
+    return acc;
+  }, {});
+
+  const cards = [
+    {
+      label: t.portfolio.equity,   icon: DollarSign, value: portfolio?.equity,
+      color: "text-[var(--accent)]",                 bg: "bg-[rgba(88,166,255,0.08)]",
+      pct: undefined, breakdown: equityBreak, signed: false,
+    },
+    {
+      label: t.portfolio.cash,     icon: Wallet,     value: portfolio?.cash,
+      color: "text-[var(--muted)]",                  bg: "bg-[var(--surface-2)]",
+      pct: undefined, breakdown: null, signed: false,
+    },
+    {
+      label: t.portfolio.dayPnl,   icon: TrendingUp, value: portfolio?.dayPnl,
+      color: colorClass(portfolio?.dayPnl ?? 0),     bg: "bg-[var(--surface-2)]",
+      pct: portfolio?.dayPnlPct, breakdown: dayBreak, signed: true,
+    },
+    {
+      label: t.portfolio.totalPnl, icon: BarChart2,  value: portfolio?.totalPnl,
+      color: colorClass(portfolio?.totalPnl ?? 0),   bg: "bg-[var(--surface-2)]",
+      pct: undefined, breakdown: totalBreak, signed: true,
+    },
   ];
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map(({ label, icon: Icon, value, color, bg, pct }) => (
+      {cards.map(({ label, icon: Icon, value, color, bg, pct, breakdown, signed }) => (
         <Card key={label} className={`relative overflow-hidden ${bg}`}>
-          <div className={`flex items-center gap-2 mb-3`}>
+          <div className="flex items-center gap-2 mb-3">
             <Icon size={14} className={color} />
             <span className="text-xs text-[var(--muted)] font-medium">{label}</span>
           </div>
           {loading || value === undefined
-            ? <div className="h-6 w-28 bg-[var(--surface-2)] rounded animate-pulse" />
+            ? <>
+                <div className="h-6 w-28 bg-[var(--surface-2)] rounded animate-pulse" />
+                <div className="mt-2 pt-2 border-t border-[var(--border)] space-y-1">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="h-3 w-full bg-[var(--surface-2)] rounded animate-pulse" />
+                  ))}
+                </div>
+              </>
             : <>
                 <div className={`text-xl font-mono font-bold ${color}`}>{fmtCurrency(value)}</div>
-                {pct !== undefined && <div className={`text-xs font-mono mt-0.5 ${color}`}>{fmtPercent(pct)}</div>}
-              </>}
+                {pct !== undefined && (
+                  <div className={`text-xs font-mono mt-0.5 ${color}`}>{fmtPercent(pct)}</div>
+                )}
+                {breakdown && (
+                  <BreakdownDots data={breakdown} lang={lang} signed={signed} />
+                )}
+              </>
+          }
         </Card>
       ))}
     </div>
