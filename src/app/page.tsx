@@ -18,7 +18,7 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col gap-4 md:gap-5 p-4 md:p-5 overflow-y-auto min-w-0">
         <Greeting />
         <SummaryCards />
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-5 items-start">
           <div className="xl:col-span-2"><PositionsTable /></div>
           <div><TopMovers /></div>
         </div>
@@ -179,7 +179,7 @@ function TopMovers() {
   function goTo(symbol: string) { setActiveSymbol(symbol); router.push(`/trade/${symbol}`); }
 
   return (
-    <Card className="p-0 overflow-hidden h-full flex flex-col">
+    <Card className="p-0 overflow-hidden flex flex-col">
       {/* Header with tabs */}
       <div className="px-5 pt-4 pb-0 border-b border-[var(--border)] shrink-0">
         <div className="flex gap-4">
@@ -209,9 +209,9 @@ function TopMovers() {
       </div>
 
       {/* List */}
-      <div className="flex flex-col flex-1 overflow-y-auto">
+      <div className="flex flex-col">
         {loading
-          ? [...Array(5)].map((_, i) => (
+          ? [...Array(10)].map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-5 py-3.5 border-b border-[var(--border)] last:border-0">
                 <div className="h-8 w-8 rounded-lg bg-[var(--surface-2)] animate-pulse" />
                 <div className="flex-1 space-y-1.5">
