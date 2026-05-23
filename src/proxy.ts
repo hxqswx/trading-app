@@ -1,30 +1,36 @@
 /**
- * Next.js 16 Proxy — protects all page routes using Clerk.
+ * Next.js Proxy — Clerk middleware runs on all routes so auth() works everywhere.
  *
- * Public routes: /sign-in (and static assets / API routes are excluded via matcher).
- * Everything else requires a Clerk session; unauthenticated users are
- * redirected to /sign-in automatically by Clerk's auth.protect().
+ * Public routes: /sign-in and all /api/* routes (APIs handle their own 401s).
+ * Page routes that aren't public redirect to /sign-in if unauthenticated.
  */
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)"]);
+// Routes that don't require a redirect — API routes return 401 themselves
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/api/(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Already signed in → redirect away from sign-in page
   if (isPublicRoute(req)) {
-    const { userId } = await auth();
-    if (userId) return NextResponse.redirect(new URL("/", req.url));
-    return; // unauthenticated on public route — allow
+    // For /sign-in: redirect away if already logged in
+    if (req.nextUrl.pathname.startsWith("/sign-in")) {
+      const { userId } = await auth();
+      if (userId) return NextResponse.redirect(new URL("/", req.url));
+    }
+    // API routes and sign-in: let through (no protect())
+    return;
   }
 
-  // Protected route — Clerk redirects to /sign-in if not authenticated
+  // All other page routes — Clerk redirects to /sign-in if unauthenticated
   await auth.protect();
 });
 
-// Run proxy on page routes only — skip API routes and static assets
+// Run on everything except Next.js internals and static files
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.svg$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.svg$).*)",
   ],
 };
