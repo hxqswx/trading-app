@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 // Routes that don't require a redirect — API routes return 401 themselves
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
+  "/sso-callback(.*)",   // OAuth provider redirect-back target
   "/api/(.*)",
 ]);
 
